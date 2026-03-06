@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* ============================================================
+   KubeNest Master Data Tool — Global Styles
+   Tailwind CSS v4 with custom theme tokens
+   ============================================================ */
+
+@theme {
+  --color-kn-blue: #003399;
+  --color-kn-teal: #00bbb9;
+  --color-kn-purple: #8080ea;
+  --color-kn-navy: #174881;
+  --color-kn-light: #f8fafc;
+}
+
+/* --- Base layer overrides --- */
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-kn-light text-gray-800;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: var(--color-kn-teal);
+    color: #ffffff;
+  }
+
+  ::-moz-selection {
+    background-color: var(--color-kn-teal);
+    color: #ffffff;
+  }
+
+  /* Scrollbar — Webkit (Chrome, Edge, Safari) */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+  }
+
+  /* Scrollbar — Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #f1f5f9;
+  }
+}
