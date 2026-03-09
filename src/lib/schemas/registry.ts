@@ -1,82 +1,11 @@
 import type { TemplateSchema } from '@/types';
-
-// --- Location & Tags ---
-import { locationSchema } from './location';
-import { tagSchema } from './tag';
-
-// --- Energy ---
-import { energySourceSchema, energyQtySchema } from './energy';
-
-// --- Scope 1 Emissions ---
-import {
-  scope1StationarySourceSchema,
-  scope1TransportSchema,
-  scope1AssignmentSchema,
-  scope1QtySchema,
-} from './scope1';
-
-// --- Scope 2 Emissions ---
-import { scope2SourceSchema, scope2QtySchema, scope2TenantSchema } from './scope2';
-
-// --- Scope 3 Emissions ---
-import { scope3SourceSchema, scope3QtySchema, scope3SupplierSchema } from './scope3';
-
-// --- Waste ---
-import { wasteSourceSchema, wasteQtySchema } from './waste';
-
-// --- Water ---
-import { waterSourceSchema, waterQtySchema } from './water';
-
-// --- WHS ---
-import { whsSourceSchema, whsQtySchema } from './whs';
-
-// --- Habitat & Biodiversity ---
-import {
-  habitatBiodiversitySourceSchema,
-  habitatManagementQtySchema,
-  speciesEndangermentQtySchema,
-  wildlifeFatalitiesQtySchema,
-} from './habitat-biodiversity';
+import { scope1TransportSchema } from './scope1';
 
 // ---------------------------------------------------------------------------
-// All 24 Schemas
+// Schema Registry — single Scope 1 Transport template
 // ---------------------------------------------------------------------------
 
-const allSchemas: TemplateSchema[] = [
-  // Location & Tags
-  locationSchema,
-  tagSchema,
-  // Energy
-  energySourceSchema,
-  energyQtySchema,
-  // Scope 1
-  scope1StationarySourceSchema,
-  scope1TransportSchema,
-  scope1AssignmentSchema,
-  scope1QtySchema,
-  // Scope 2
-  scope2SourceSchema,
-  scope2QtySchema,
-  scope2TenantSchema,
-  // Scope 3
-  scope3SourceSchema,
-  scope3QtySchema,
-  scope3SupplierSchema,
-  // Waste
-  wasteSourceSchema,
-  wasteQtySchema,
-  // Water
-  waterSourceSchema,
-  waterQtySchema,
-  // WHS
-  whsSourceSchema,
-  whsQtySchema,
-  // Habitat & Biodiversity
-  habitatBiodiversitySourceSchema,
-  habitatManagementQtySchema,
-  speciesEndangermentQtySchema,
-  wildlifeFatalitiesQtySchema,
-];
+const allSchemas: TemplateSchema[] = [scope1TransportSchema];
 
 /**
  * Central registry of all template schemas, keyed by schema id.
@@ -84,10 +13,6 @@ const allSchemas: TemplateSchema[] = [
 export const schemaRegistry: Map<string, TemplateSchema> = new Map(
   allSchemas.map((schema) => [schema.id, schema]),
 );
-
-// ---------------------------------------------------------------------------
-// Helper Functions
-// ---------------------------------------------------------------------------
 
 /**
  * Retrieve a single schema by its id.
@@ -101,6 +26,13 @@ export function getSchema(id: string): TemplateSchema | undefined {
  */
 export function getAllSchemas(): TemplateSchema[] {
   return Array.from(schemaRegistry.values());
+}
+
+/**
+ * Return the default (only) schema.
+ */
+export function getDefaultSchema(): TemplateSchema {
+  return scope1TransportSchema;
 }
 
 /**

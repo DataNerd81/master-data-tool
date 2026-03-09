@@ -1,266 +1,142 @@
 import type { TemplateSchema } from '@/types';
 
-export const scope1StationarySourceSchema: TemplateSchema = {
-  id: 'scope1-stationary-source',
-  name: 'Scope 1 - Stationary Sources',
-  description: 'Stationary combustion emission sources such as boilers, generators and furnaces.',
-  group: 'Scope 1 Emissions',
-  icon: 'Flame',
-  columns: [
-    {
-      name: 'Identifier',
-      aliases: ['id', 'source id', 'source code', 'asset id', 'equipment id'],
-      type: 'text',
-      required: true,
-      description: 'Unique identifier for the stationary source',
-    },
-    {
-      name: 'Name (optional)',
-      aliases: ['name', 'source name', 'equipment name', 'description'],
-      type: 'text',
-      required: false,
-      description: 'Display name for the source',
-    },
-    {
-      name: 'Equipment Type',
-      aliases: ['equipment', 'type', 'asset type', 'equipment category'],
-      type: 'enum',
-      required: true,
-      description: 'Type of stationary equipment',
-      allowedValues: [
-        'Boiler', 'Burner', 'Dryer', 'Flare', 'Furnace', 'Generator', 'Heater',
-        'Incinerator', 'Internal Combustion Engine', 'Kiln', 'Open Burning',
-        'Turbine', 'Oven', 'Thermal Oxidizer', 'Other',
-      ],
-    },
-    {
-      name: 'Fuel Category',
-      aliases: ['fuel cat', 'fuel group', 'category'],
-      type: 'enum',
-      required: true,
-      description: 'Broad fuel category',
-      allowedValues: ['Solid', 'Liquid', 'Gaseous'],
-    },
-    {
-      name: 'Fuel Type',
-      aliases: ['fuel', 'fuel name', 'fuel source'],
-      type: 'text',
-      required: true,
-      description: 'Specific fuel type used',
-    },
-    {
-      name: 'Active Date',
-      aliases: ['start date', 'active from', 'from date', 'commissioned'],
-      type: 'date',
-      required: true,
-      description: 'Date the source became active',
-    },
-    {
-      name: 'Inactive Date (optional)',
-      aliases: ['end date', 'inactive from', 'to date', 'decommissioned'],
-      type: 'date',
-      required: false,
-      description: 'Date the source became inactive',
-    },
-    {
-      name: 'Tags (optional)',
-      aliases: ['tags', 'labels', 'categories'],
-      type: 'text',
-      required: false,
-      description: 'Comma-separated tags',
-    },
-    {
-      name: 'Location (optional)',
-      aliases: ['location', 'location id', 'site', 'site id', 'facility'],
-      type: 'text',
-      required: false,
-      description: 'Identifier of the associated location',
-    },
-  ],
-  uniqueConstraint: ['Identifier'],
-};
+// ---------------------------------------------------------------------------
+// NGA Reference Table — Category + Fuel Type combinations
+// ---------------------------------------------------------------------------
+
+export interface NGAEntry {
+  category: string;
+  fuelType: string;
+}
+
+export const NGA_REFERENCE_TABLE: NGAEntry[] = [
+  // Cars and light commercial vehicles
+  { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Liquefied petroleum gas (LPG)' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Fuel oil' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Ethanol' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Biodiesel' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Renewable diesel' },
+  { category: 'Cars and light commercial vehicles', fuelType: 'Other biofuels' },
+
+  // Light duty vehicles
+  { category: 'Light duty vehicles', fuelType: 'Compressed natural gas (Light Duty Vehicle)' },
+  { category: 'Light duty vehicles', fuelType: 'Liquefied natural gas' },
+
+  // Heavy duty vehicles
+  { category: 'Heavy duty vehicles', fuelType: 'Compressed natural gas (Heavy Duty Vehicle)' },
+  { category: 'Heavy duty vehicles', fuelType: 'Liquefied natural gas' },
+  { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iv or higher' },
+  { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iii' },
+  { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' },
+  { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iv or higher' },
+  { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iii' },
+  { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro i' },
+
+  // Aviation
+  { category: 'Aviation', fuelType: 'Gasoline for use as fuel in an aircraft' },
+  { category: 'Aviation', fuelType: 'Kerosene for use as fuel in an aircraft' },
+  { category: 'Aviation', fuelType: 'Renewable aviation kerosene' },
+];
+
+/**
+ * Get all unique NGA categories.
+ */
+export function getNGACategories(): string[] {
+  return [...new Set(NGA_REFERENCE_TABLE.map((e) => e.category))];
+}
+
+/**
+ * Get fuel types for a given NGA category.
+ */
+export function getFuelTypesForCategory(category: string): string[] {
+  return NGA_REFERENCE_TABLE
+    .filter((e) => e.category === category)
+    .map((e) => e.fuelType);
+}
+
+// ---------------------------------------------------------------------------
+// Scope 1 Transport Schema
+// ---------------------------------------------------------------------------
 
 export const scope1TransportSchema: TemplateSchema = {
   id: 'scope1-transport',
-  name: 'Scope 1 - Transport',
-  description: 'Transport vehicles and fleet assets for Scope 1 mobile combustion emissions.',
+  name: 'Scope 1 Transport',
+  description: 'Scope 1 transport fuel consumption data — extract rego/asset, date, fuel quantity, unit, and auto-detect NGA category and fuel type.',
   group: 'Scope 1 Emissions',
   icon: 'Truck',
   columns: [
     {
-      name: 'Identifier',
-      aliases: ['id', 'vehicle id', 'fleet id', 'registration', 'rego', 'asset id'],
+      name: 'Rego or Asset Number',
+      aliases: [
+        'rego', 'registration', 'reg', 'reg no', 'reg number', 'registration number',
+        'asset', 'asset number', 'asset no', 'asset id', 'asset code',
+        'vehicle', 'vehicle id', 'vehicle no', 'vehicle number',
+        'fleet', 'fleet id', 'fleet no', 'fleet number',
+        'plate', 'plate number', 'number plate', 'license plate',
+        'identifier', 'id', 'equipment', 'equipment id', 'equipment no',
+      ],
       type: 'text',
       required: true,
-      description: 'Unique identifier for the vehicle',
+      description: 'Vehicle registration or asset number',
     },
     {
-      name: 'Name (optional)',
-      aliases: ['name', 'vehicle name', 'description', 'fleet name'],
-      type: 'text',
-      required: false,
-      description: 'Display name for the vehicle',
+      name: 'Data Entry Date',
+      aliases: [
+        'date', 'entry date', 'data entry date', 'data date',
+        'transaction date', 'trans date', 'delivery date',
+        'period', 'period date', 'reporting date', 'report date',
+        'invoice date', 'fill date', 'fuel date', 'purchase date',
+      ],
+      type: 'date',
+      required: true,
+      description: 'Date of the fuel transaction or data entry',
     },
     {
-      name: 'Year',
-      aliases: ['model year', 'manufacture year', 'year of manufacture', 'vehicle year'],
+      name: 'Quantity (of Fuel)',
+      aliases: [
+        'quantity', 'qty', 'amount', 'volume', 'fuel qty', 'fuel quantity',
+        'fuel amount', 'fuel volume', 'litres', 'liters', 'consumption',
+        'usage', 'fuel usage', 'fuel consumption', 'total', 'total litres',
+        'total liters', 'net qty', 'net quantity', 'gross qty',
+      ],
       type: 'number',
       required: true,
-      description: 'Year of manufacture',
-      validation: { min: 1900, max: 2100 },
+      description: 'Quantity of fuel consumed',
+      validation: { min: 0 },
     },
     {
-      name: 'Make (optional)',
-      aliases: ['make', 'manufacturer', 'brand', 'vehicle make'],
+      name: 'Unit (Litres or Kl etc)',
+      aliases: [
+        'unit', 'uom', 'unit of measure', 'measurement unit', 'units',
+        'measure', 'fuel unit', 'qty unit', 'quantity unit',
+      ],
       type: 'text',
-      required: false,
-      description: 'Vehicle manufacturer',
+      required: true,
+      description: 'Unit of measurement (e.g. L, kL, gal)',
     },
     {
-      name: 'Model (optional)',
-      aliases: ['model', 'vehicle model'],
-      type: 'text',
-      required: false,
-      description: 'Vehicle model',
-    },
-    {
-      name: 'Category',
-      aliases: ['vehicle category', 'vehicle type', 'type', 'class'],
+      name: 'Category (from NGA table on right)',
+      aliases: [
+        'category', 'nga category', 'vehicle category', 'vehicle type',
+        'type', 'class', 'vehicle class', 'asset category', 'asset type',
+      ],
       type: 'enum',
       required: true,
-      description: 'Vehicle category',
-      allowedValues: [
-        'Cars and light commercial vehicles',
-        'Light duty vehicles',
-        'Heavy duty vehicles',
-        'Aviation',
+      description: 'NGA vehicle category',
+      allowedValues: getNGACategories(),
+    },
+    {
+      name: 'Fuel Type (from NGA table on right)',
+      aliases: [
+        'fuel type', 'nga fuel type', 'fuel', 'fuel name', 'fuel source',
+        'product', 'product name', 'fuel product', 'fuel description',
       ],
-    },
-    {
-      name: 'Fuel Type',
-      aliases: ['fuel', 'fuel name', 'fuel source'],
       type: 'text',
       required: true,
-      description: 'Fuel type used by the vehicle',
-    },
-    {
-      name: 'Active Date',
-      aliases: ['start date', 'active from', 'from date'],
-      type: 'date',
-      required: true,
-      description: 'Date the vehicle became active in the fleet',
-    },
-    {
-      name: 'Inactive Date (optional)',
-      aliases: ['end date', 'inactive from', 'to date', 'disposed'],
-      type: 'date',
-      required: false,
-      description: 'Date the vehicle was removed from the fleet',
-    },
-    {
-      name: 'Tags (optional)',
-      aliases: ['tags', 'labels', 'categories'],
-      type: 'text',
-      required: false,
-      description: 'Comma-separated tags',
-    },
-    {
-      name: 'Location (optional)',
-      aliases: ['location', 'location id', 'site', 'site id', 'depot'],
-      type: 'text',
-      required: false,
-      description: 'Identifier of the associated location',
+      description: 'NGA fuel type',
     },
   ],
-  uniqueConstraint: ['Identifier'],
-};
-
-export const scope1AssignmentSchema: TemplateSchema = {
-  id: 'scope1-assignment',
-  name: 'Scope 1 - Assignment',
-  description: 'Assign Scope 1 emission sources to locations for a given period.',
-  group: 'Scope 1 Emissions',
-  icon: 'Flame',
-  columns: [
-    {
-      name: 'Source Identifier',
-      aliases: ['source id', 'source', 'emission source', 'source code'],
-      type: 'text',
-      required: true,
-      description: 'Identifier of the Scope 1 source',
-    },
-    {
-      name: 'Location Identifier',
-      aliases: ['location', 'location id', 'site', 'site id'],
-      type: 'text',
-      required: true,
-      description: 'Identifier of the location',
-    },
-    {
-      name: 'Start Date',
-      aliases: ['start', 'from date', 'effective from', 'active from'],
-      type: 'date',
-      required: true,
-      description: 'Start date of the assignment',
-    },
-    {
-      name: 'End Date (optional)',
-      aliases: ['end', 'to date', 'effective to', 'active to'],
-      type: 'date',
-      required: false,
-      description: 'End date of the assignment',
-    },
-    {
-      name: 'Tags (optional)',
-      aliases: ['tags', 'labels', 'categories'],
-      type: 'text',
-      required: false,
-      description: 'Comma-separated tags',
-    },
-  ],
-};
-
-export const scope1QtySchema: TemplateSchema = {
-  id: 'scope1-qty',
-  name: 'Scope 1 - Quantities',
-  description: 'Scope 1 emission quantity data for reporting periods.',
-  group: 'Scope 1 Emissions',
-  icon: 'Flame',
-  columns: [
-    {
-      name: 'Identifier',
-      aliases: ['id', 'source id', 'source identifier', 'source code'],
-      type: 'text',
-      required: true,
-      description: 'Identifier of the Scope 1 source',
-    },
-    {
-      name: 'Quantity',
-      aliases: ['qty', 'amount', 'value', 'consumption', 'usage'],
-      type: 'number',
-      required: true,
-      description: 'Quantity consumed or used',
-    },
-    {
-      name: 'Unit',
-      aliases: ['uom', 'unit of measure', 'measurement unit'],
-      type: 'text',
-      required: true,
-      description: 'Unit of measurement',
-    },
-    {
-      name: 'Start Date',
-      aliases: ['start', 'from date', 'period start', 'begin date'],
-      type: 'date',
-      required: true,
-      description: 'Start of the reporting period',
-    },
-    {
-      name: 'End Date (optional)',
-      aliases: ['end', 'to date', 'period end'],
-      type: 'date',
-      required: false,
-      description: 'End of the reporting period',
-    },
-  ],
+  uniqueConstraint: ['Rego or Asset Number', 'Data Entry Date'],
 };

@@ -1,14 +1,16 @@
 'use client';
 
 import { useMemo } from 'react';
-import { ArrowRight, ArrowLeft, Columns3 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Columns3, Fuel } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { getSchema } from '@/lib/schemas/registry';
+import { useMapping } from '@/hooks/use-mapping';
 import { ColumnMapper } from '@/components/mapping/ColumnMapper';
 
 export function MappingStep() {
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
   const setStep = useAppStore((s) => s.setStep);
+  const { autoDetectFuelTypes } = useMapping();
 
   const schema = useMemo(
     () => (selectedTemplateId ? getSchema(selectedTemplateId) : undefined),
@@ -20,6 +22,8 @@ export function MappingStep() {
   }
 
   function handleContinue() {
+    // Run fuel type auto-detection before proceeding to analysis
+    autoDetectFuelTypes();
     setStep('analysis');
   }
 
@@ -34,13 +38,32 @@ export function MappingStep() {
           <h1 className="text-2xl font-bold text-gray-900">Map Your Columns</h1>
           {schema && (
             <p className="mt-0.5 text-sm text-gray-500">
-              Map your spreadsheet columns to the{' '}
+              Map your messy spreadsheet columns to the{' '}
               <strong className="font-semibold text-gray-700">
                 {schema.name}
               </strong>{' '}
-              template
+              template. Fuel types will be auto-detected from your data.
             </p>
           )}
+        </div>
+      </div>
+
+      {/* Fuel type auto-detection info */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div className="flex items-start gap-3">
+          <Fuel className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">
+              Fuel Type Auto-Detection
+            </p>
+            <p className="mt-0.5 text-xs text-amber-700">
+              When you click &quot;Run Analysis&quot;, the tool will scan your data for
+              keywords like &quot;diesel&quot;, &quot;petrol&quot;, &quot;unleaded&quot;, etc. and
+              automatically populate the NGA Category and Fuel Type columns.
+              You don&apos;t need to map those columns if your data has fuel
+              descriptions anywhere.
+            </p>
+          </div>
         </div>
       </div>
 

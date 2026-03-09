@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { autoMapColumns } from '@/lib/mapping/auto-mapper';
+import { useCallback } from 'react';
+import { autoMapColumns, autoPopulateFuelType } from '@/lib/mapping/auto-mapper';
 import {
   saveMappingConfig,
   loadMappingConfig,
@@ -27,6 +27,8 @@ interface UseMappingReturn {
   saveMappings: () => void;
   /** Load previously saved mappings from localStorage. Returns true if found. */
   loadMappings: () => boolean;
+  /** Run fuel type auto-detection on the active data. */
+  autoDetectFuelTypes: () => void;
 }
 
 /**
@@ -65,6 +67,18 @@ export function useMapping(): UseMappingReturn {
     setMappings(result);
   }, [selectedTemplateId, workbook, selectedSheets, setMappings]);
 
+  /**
+   * Run fuel type auto-detection: scan all data for fuel keywords and
+   * populate the Category and Fuel Type columns on the mapped data.
+   */
+  const autoDetectFuelTypes = useCallback(() => {
+    const mappedData = useMappingStore.getState().getMappedData();
+    if (mappedData.length === 0) return;
+
+    const updatedData = autoPopulateFuelType(mappedData);
+    useDataStore.getState().setActiveData(updatedData);
+  }, []);
+
   const saveMappings = useCallback(() => {
     if (!selectedTemplateId) return;
     saveMappingConfig({
@@ -90,5 +104,6 @@ export function useMapping(): UseMappingReturn {
     updateMapping,
     saveMappings,
     loadMappings,
+    autoDetectFuelTypes,
   };
 }
