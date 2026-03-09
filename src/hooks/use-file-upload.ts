@@ -2,10 +2,11 @@
 
 import { useState, useCallback } from 'react';
 import { parseWorkbook } from '@/lib/excel/parser';
+import { preProcessFuelData, type PreProcessResult } from '@/lib/transforms/pre-processor';
 import { useDataStore } from '@/stores/data-store';
 
 // ---------------------------------------------------------------------------
-// useFileUpload — handles file parsing and data store updates
+// useFileUpload — handles file parsing, pre-processing, and data store updates
 // ---------------------------------------------------------------------------
 
 interface UseFileUploadReturn {
@@ -15,18 +16,21 @@ interface UseFileUploadReturn {
   isLoading: boolean;
   /** Error message from the most recent upload attempt, or null. */
   error: string | null;
+  /** Pre-processing summary from the most recent upload, or null. */
+  preProcessSummary: PreProcessResult['summary'] | null;
 }
 
 /**
  * Custom hook for uploading and parsing Excel files.
  *
- * Calls the parser to read the file, then updates the data store with
- * the parsed workbook. Automatically selects the first sheet and sets
- * it as active data.
+ * Calls the parser to read the file, runs the pre-processor to clean
+ * messy fuel card data (extract regos, filter junk, default units),
+ * then updates the data store.
  */
 export function useFileUpload(): UseFileUploadReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preProcessSummary, setPreProcessSummary] = useState<PreProcessResult['summary'] | null>(null);
 
   const { setWorkbook, setSelectedSheets, setActiveData } = useDataStore();
 
@@ -34,6 +38,7 @@ export function useFileUpload(): UseFileUploadReturn {
     async (file: File) => {
       setIsLoading(true);
       setError(null);
+      setPreProcessSummary(null);
 
       try {
         // Validate file type
@@ -60,6 +65,27 @@ export function useFileUpload(): UseFileUploadReturn {
           throw new Error('The uploaded file contains no data sheets.');
         }
 
+        // Pre-process each sheet to clean messy fuel card data
+        for (let i = 0; i < workbook.sheets.length; i++) {
+          const sheet = workbook.sheets[i];
+          if (sheet.data.length === 0) continue;
+
+          const result = preProcessFuelData(sheet);
+
+          // Update the sheet with cleaned data and updated headers
+          workbook.sheets[i] = {
+            ...sheet,
+            headers: result.headers,
+            data: result.data,
+            rowCount: result.data.length,
+          };
+
+          // Store summary for the first sheet (primary display)
+          if (i === 0) {
+            setPreProcessSummary(result.summary);
+          }
+        }
+
         // Update the store
         setWorkbook(workbook);
 
@@ -84,5 +110,5 @@ export function useFileUpload(): UseFileUploadReturn {
     [setWorkbook, setSelectedSheets, setActiveData],
   );
 
-  return { uploadFile, isLoading, error };
+  return { uploadFile, isLoading, error, preProcessSummary };
 }
