@@ -32,7 +32,7 @@ export function useFileUpload(): UseFileUploadReturn {
   const [error, setError] = useState<string | null>(null);
   const [preProcessSummary, setPreProcessSummary] = useState<PreProcessResult['summary'] | null>(null);
 
-  const { setWorkbook, setSelectedSheets, setActiveData } = useDataStore();
+  const { setWorkbook, setSelectedSheets, setActiveData, setPreProcessSummary: setStoreSummary } = useDataStore();
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -83,6 +83,7 @@ export function useFileUpload(): UseFileUploadReturn {
           // Store summary for the first sheet (primary display)
           if (i === 0) {
             setPreProcessSummary(result.summary);
+            setStoreSummary(result.summary);
           }
         }
 
