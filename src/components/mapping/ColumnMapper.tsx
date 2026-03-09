@@ -6,7 +6,7 @@ import { useMapping } from '@/hooks/use-mapping';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
 import { getSchema } from '@/lib/schemas/registry';
-import { MappingRow } from './MappingRow';
+import { MappingRow, type PreProcessedHint } from './MappingRow';
 import { cn } from '@/components/ui/cn';
 import type { CellValue } from '@/types';
 
@@ -16,6 +16,7 @@ export function ColumnMapper() {
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
   const workbook = useDataStore((s) => s.workbook);
   const selectedSheets = useDataStore((s) => s.selectedSheets);
+  const preProcessSummary = useDataStore((s) => s.preProcessSummary);
 
   const schema = useMemo(
     () => (selectedTemplateId ? getSchema(selectedTemplateId) : undefined),
@@ -59,23 +60,60 @@ export function ColumnMapper() {
     return map;
   }, [workbook, selectedSheets]);
 
-  // Compute mapping statistics
+  // Compute mapping statistics (auto-detected fields count as handled)
   const stats = useMemo(() => {
     if (!schema) return { total: 0, mapped: 0, requiredTotal: 0, requiredMapped: 0 };
     const total = schema.columns.length;
+    const autoDetectedCount = schema.columns.filter((c) => c.autoDetected).length;
     const mapped = mappings.filter(
       (m) => m.targetColumn !== null,
-    ).length;
+    ).length + autoDetectedCount;
     const requiredCols = schema.columns.filter((c) => c.required);
     const requiredTotal = requiredCols.length;
     const mappedTargets = new Set(
       mappings.filter((m) => m.targetColumn !== null).map((m) => m.targetColumn),
     );
     const requiredMapped = requiredCols.filter((c) =>
-      mappedTargets.has(c.name),
+      mappedTargets.has(c.name) || c.autoDetected,
     ).length;
     return { total, mapped, requiredTotal, requiredMapped };
   }, [schema, mappings]);
+
+  // Build pre-processed hints for fields the pre-processor injected
+  const preProcessedHints = useMemo(() => {
+    const hints = new Map<string, PreProcessedHint>();
+
+    // NGA Category and Fuel Type are always auto-detected (regardless of pre-processing)
+    hints.set('Category (from NGA table on right)', {
+      message: 'Will be auto-detected from your data',
+      detail: 'We\'ll scan for keywords like "diesel", "petrol", "unleaded" and map them to the correct NGA category.',
+    });
+    hints.set('Fuel Type (from NGA table on right)', {
+      message: 'Will be auto-detected from your data',
+      detail: 'Fuel types will be inferred from product descriptions in your spreadsheet.',
+    });
+
+    if (!preProcessSummary) return hints;
+
+    // Rego was extracted from section headers
+    if (preProcessSummary.regosFound.length > 0) {
+      const regos = preProcessSummary.regosFound.join(', ');
+      hints.set('Rego or Asset Number', {
+        message: `Found ${preProcessSummary.regosFound.length} rego${preProcessSummary.regosFound.length !== 1 ? 's' : ''} in your data`,
+        detail: `Your regos aren't in a clear column, but we extracted them from the section headers: ${regos}`,
+      });
+    }
+
+    // Unit was defaulted to "L"
+    if (preProcessSummary.unitDefaulted) {
+      hints.set('Unit (Litres or Kl etc)', {
+        message: 'Defaulted to Litres (L)',
+        detail: 'No unit column was found in your data, so we\'ve set it to Litres. You can change this if needed.',
+      });
+    }
+
+    return hints;
+  }, [preProcessSummary]);
 
   if (!schema) {
     return (
@@ -185,6 +223,8 @@ export function ColumnMapper() {
                 ? sampleMap.get(mapping.sourceColumn) ?? []
                 : [];
 
+              const hint = preProcessedHints.get(col.name);
+
               return (
                 <MappingRow
                   key={col.name}
@@ -195,6 +235,7 @@ export function ColumnMapper() {
                   onChangeMapping={(sourceCol) =>
                     handleChangeMapping(col.name, sourceCol)
                   }
+                  preProcessedHint={hint}
                 />
               );
             })}

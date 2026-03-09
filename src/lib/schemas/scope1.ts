@@ -126,6 +126,7 @@ export const scope1TransportSchema: TemplateSchema = {
       required: true,
       description: 'NGA vehicle category',
       allowedValues: getNGACategories(),
+      autoDetected: true,
     },
     {
       name: 'Fuel Type (from NGA table on right)',
@@ -136,6 +137,7 @@ export const scope1TransportSchema: TemplateSchema = {
       type: 'text',
       required: true,
       description: 'NGA fuel type',
+      autoDetected: true,
     },
   ],
   uniqueConstraint: ['Rego or Asset Number', 'Data Entry Date'],

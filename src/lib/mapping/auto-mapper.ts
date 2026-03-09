@@ -33,13 +33,16 @@ export function autoMapColumns(
   schema: TemplateSchema,
 ): ColumnMapping[] {
   // Build the list of target columns with all searchable names
-  const targets: SchemaTarget[] = schema.columns.map((col) => ({
-    name: col.name,
-    searchTerms: [
-      col.name.toLowerCase(),
-      ...col.aliases.map((a) => a.toLowerCase()),
-    ],
-  }));
+  // Skip auto-detected columns (e.g. NGA Category/Fuel Type) — they're populated by the tool
+  const targets: SchemaTarget[] = schema.columns
+    .filter((col) => !col.autoDetected)
+    .map((col) => ({
+      name: col.name,
+      searchTerms: [
+        col.name.toLowerCase(),
+        ...col.aliases.map((a) => a.toLowerCase()),
+      ],
+    }));
 
   // Build a flat list of searchable items for Fuse.js
   // Each entry maps a search term back to its target column name

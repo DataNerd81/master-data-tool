@@ -26,6 +26,8 @@ export interface ColumnDef {
   validation?: ColumnValidation;
   transform?: TransformType;
   defaultValue?: string | number | boolean;
+  /** If true, this field is auto-populated by the tool (not mapped from user columns). */
+  autoDetected?: boolean;
 }
 
 export interface HierarchyRule {
