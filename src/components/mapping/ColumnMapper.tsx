@@ -60,20 +60,21 @@ export function ColumnMapper() {
     return map;
   }, [workbook, selectedSheets]);
 
-  // Compute mapping statistics
+  // Compute mapping statistics (auto-detected fields count as handled)
   const stats = useMemo(() => {
     if (!schema) return { total: 0, mapped: 0, requiredTotal: 0, requiredMapped: 0 };
     const total = schema.columns.length;
+    const autoDetectedCount = schema.columns.filter((c) => c.autoDetected).length;
     const mapped = mappings.filter(
       (m) => m.targetColumn !== null,
-    ).length;
+    ).length + autoDetectedCount;
     const requiredCols = schema.columns.filter((c) => c.required);
     const requiredTotal = requiredCols.length;
     const mappedTargets = new Set(
       mappings.filter((m) => m.targetColumn !== null).map((m) => m.targetColumn),
     );
     const requiredMapped = requiredCols.filter((c) =>
-      mappedTargets.has(c.name),
+      mappedTargets.has(c.name) || c.autoDetected,
     ).length;
     return { total, mapped, requiredTotal, requiredMapped };
   }, [schema, mappings]);
