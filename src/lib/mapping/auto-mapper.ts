@@ -178,8 +178,13 @@ const FUEL_KEYWORDS: { pattern: RegExp; entry: NGAEntry }[] = [
   { pattern: /diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' } },
   { pattern: /diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' } },
 
-  // Petrol / Gasoline
-  { pattern: /\b(petrol|gasoline|unleaded|ulp|pulp|e10)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  // Petrol / Gasoline — must come AFTER diesel so "Premium Diesel" doesn't match "Premium"
+  { pattern: /\b(petrol|gasoline)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\bunleaded\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(ulp|pulp)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(e10|e85)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(vortex|v-power|bp\s*ultimate)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(ron\s*9[1-8]|95\s*octane|98\s*octane)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
 
   // LPG
   { pattern: /\b(lpg|liquefied\s*petroleum|autogas)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Liquefied petroleum gas (LPG)' } },
