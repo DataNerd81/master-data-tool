@@ -1,5 +1,5 @@
 import Fuse from 'fuse.js';
-import type { ColumnMapping, TemplateSchema } from '@/types';
+import type { ColumnMapping, TemplateSchema, DataRow } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Auto-Mapper — fuzzy-matches source column headers to schema columns
@@ -150,4 +150,167 @@ function getConfidence(
   if (fuseScore < 0.5) return 'medium';
   if (fuseScore < 0.7) return 'low';
   return 'unmapped';
+}
+
+// ---------------------------------------------------------------------------
+// Fuel Type Auto-Detection — infer NGA Category and Fuel Type from data
+// ---------------------------------------------------------------------------
+
+interface NGAEntry {
+  category: string;
+  fuelType: string;
+}
+
+/**
+ * Keywords that suggest a specific fuel type. Ordered by specificity (most
+ * specific first so that e.g. "renewable diesel" matches before "diesel").
+ */
+const FUEL_KEYWORDS: { pattern: RegExp; entry: NGAEntry }[] = [
+  // Renewable diesel variants
+  { pattern: /renewable\s*diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iv or higher' } },
+  { pattern: /renewable\s*diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iii' } },
+  { pattern: /renewable\s*diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro i' } },
+  { pattern: /renewable\s*diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Renewable diesel' } },
+
+  // Diesel variants
+  { pattern: /diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iv or higher' } },
+  { pattern: /diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iii' } },
+  { pattern: /diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' } },
+  { pattern: /diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' } },
+
+  // Petrol / Gasoline — must come AFTER diesel so "Premium Diesel" doesn't match "Premium"
+  { pattern: /\b(petrol|gasoline)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\bunleaded\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(ulp|pulp)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(e10|e85)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(vortex|v-power|bp\s*ultimate)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(ron\s*9[1-8]|95\s*octane|98\s*octane)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+
+  // LPG
+  { pattern: /\b(lpg|liquefied\s*petroleum|autogas)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Liquefied petroleum gas (LPG)' } },
+
+  // Biodiesel
+  { pattern: /\bbiodiesel\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Biodiesel' } },
+
+  // Ethanol
+  { pattern: /\bethanol\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Ethanol' } },
+
+  // Fuel oil
+  { pattern: /\bfuel\s*oil\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Fuel oil' } },
+
+  // Other biofuels
+  { pattern: /\bbiofuel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Other biofuels' } },
+
+  // CNG
+  { pattern: /\b(cng|compressed\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Compressed natural gas (Light Duty Vehicle)' } },
+
+  // LNG
+  { pattern: /\b(lng|liquefied\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Liquefied natural gas' } },
+
+  // Aviation fuel
+  { pattern: /\b(avgas|aviation\s*gas)/i, entry: { category: 'Aviation', fuelType: 'Gasoline for use as fuel in an aircraft' } },
+  { pattern: /\b(jet\s*fuel|jet\s*a|avtur|aviation\s*kerosene)/i, entry: { category: 'Aviation', fuelType: 'Kerosene for use as fuel in an aircraft' } },
+  { pattern: /\brenewable\s*aviation/i, entry: { category: 'Aviation', fuelType: 'Renewable aviation kerosene' } },
+];
+
+/**
+ * Attempt to infer the NGA Category and Fuel Type from text that might
+ * appear in a messy spreadsheet (e.g. product descriptions, column values).
+ *
+ * Returns null if no match is found.
+ */
+export function inferFuelType(text: string): NGAEntry | null {
+  if (!text || typeof text !== 'string') return null;
+  const normalised = text.trim();
+  if (!normalised) return null;
+
+  for (const { pattern, entry } of FUEL_KEYWORDS) {
+    if (pattern.test(normalised)) {
+      return entry;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Tracks which cells were auto-populated so they can be flagged for review.
+ */
+export interface AutoDetectedCell {
+  row: number;
+  column: string;
+  value: string;
+  matchedFrom: string; // the source text that triggered the detection
+}
+
+export interface AutoPopulateResult {
+  data: DataRow[];
+  autoDetectedCells: AutoDetectedCell[];
+}
+
+/**
+ * Auto-populate NGA Category and Fuel Type for each data row by scanning
+ * all columns for fuel-related keywords.
+ *
+ * This function looks through every cell value in a row for clues about
+ * what fuel was used, then populates the Category and Fuel Type columns.
+ * It tracks which cells were auto-filled so they can be flagged for user review.
+ *
+ * @param data       - The mapped data rows (target column names)
+ * @returns Updated data rows and list of auto-detected cells needing verification
+ */
+export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
+  const categoryCol = 'Category (from NGA table on right)';
+  const fuelTypeCol = 'Fuel Type (from NGA table on right)';
+  const autoDetectedCells: AutoDetectedCell[] = [];
+
+  const updatedData = data.map((row, rowIndex) => {
+    const newRow = { ...row };
+
+    const existingCat = row[categoryCol];
+    const existingFt = row[fuelTypeCol];
+
+    // If both are already populated with valid values, skip
+    if (existingCat && existingFt) return newRow;
+
+    // Scan all columns in this row for fuel type clues
+    let bestMatch: NGAEntry | null = null;
+    let matchedFrom = '';
+
+    for (const [, val] of Object.entries(row)) {
+      if (val === null || val === undefined) continue;
+      const textVal = String(val);
+      const match = inferFuelType(textVal);
+      if (match) {
+        bestMatch = match;
+        matchedFrom = textVal;
+        break;
+      }
+    }
+
+    if (bestMatch) {
+      if (!existingCat) {
+        newRow[categoryCol] = bestMatch.category;
+        autoDetectedCells.push({
+          row: rowIndex,
+          column: categoryCol,
+          value: bestMatch.category,
+          matchedFrom,
+        });
+      }
+      if (!existingFt) {
+        newRow[fuelTypeCol] = bestMatch.fuelType;
+        autoDetectedCells.push({
+          row: rowIndex,
+          column: fuelTypeCol,
+          value: bestMatch.fuelType,
+          matchedFrom,
+        });
+      }
+    }
+
+    return newRow;
+  });
+
+  return { data: updatedData, autoDetectedCells };
 }

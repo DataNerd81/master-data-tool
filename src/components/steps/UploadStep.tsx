@@ -1,23 +1,25 @@
 'use client';
 
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { useEffect } from 'react';
+import { ArrowRight, Sparkles, Truck } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
-import { TemplateSelector } from '@/components/upload/TemplateSelector';
 import { DropZone } from '@/components/upload/DropZone';
 import { SheetPicker } from '@/components/upload/SheetPicker';
 import { cn } from '@/components/ui/cn';
 
 export function UploadStep() {
-  const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
   const setStep = useAppStore((s) => s.setStep);
+  const setTemplate = useAppStore((s) => s.setTemplate);
   const workbook = useDataStore((s) => s.workbook);
   const selectedSheets = useDataStore((s) => s.selectedSheets);
 
-  const canContinue =
-    selectedTemplateId !== null &&
-    workbook !== null &&
-    selectedSheets.length > 0;
+  // Auto-select the only template on mount
+  useEffect(() => {
+    setTemplate('scope1-transport');
+  }, [setTemplate]);
+
+  const canContinue = workbook !== null && selectedSheets.length > 0;
 
   function handleContinue() {
     if (!canContinue) return;
@@ -32,19 +34,35 @@ export function UploadStep() {
           <Sparkles className="h-7 w-7 text-white" />
         </div>
         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-          Welcome to the Master Data Tool
+          Scope 1 Transport — Fuel Data Tool
         </h1>
         <p className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed text-gray-500 sm:text-base">
-          Upload your Excel data, map it to a KubeNest template, and let the
-          tool analyse, cleanse, and export your data ready for import.
+          Upload your messy fuel data spreadsheet. The tool will find your regos,
+          dates, fuel quantities, and automatically detect the fuel type and NGA
+          category.
         </p>
       </div>
 
-      {/* Two-column: Template + Upload */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <TemplateSelector />
+      {/* Template info banner */}
+      <div className="mx-auto max-w-2xl rounded-xl border border-kn-teal/30 bg-kn-teal/5 p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-kn-teal/10">
+            <Truck className="h-5 w-5 text-kn-teal" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">
+              Scope 1 Transport Template
+            </p>
+            <p className="text-xs text-gray-500">
+              Extracts: Rego/Asset Number, Data Entry Date, Fuel Quantity, Unit,
+              NGA Category, NGA Fuel Type
+            </p>
+          </div>
         </div>
+      </div>
+
+      {/* Upload area */}
+      <div className="mx-auto max-w-2xl">
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <DropZone />
         </div>
@@ -52,13 +70,13 @@ export function UploadStep() {
 
       {/* Sheet Picker (shown after upload) */}
       {workbook && (
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div className="mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <SheetPicker />
         </div>
       )}
 
       {/* Continue Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-center">
         <button
           type="button"
           disabled={!canContinue}

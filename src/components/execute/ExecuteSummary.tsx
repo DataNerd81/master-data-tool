@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  AlertTriangle,
   Type,
   Hash,
   Calendar,
@@ -26,6 +27,7 @@ const CATEGORY_ICONS: Record<IssueCategory, typeof AlertCircle> = {
   hierarchy: GitBranch,
   unit: Ruler,
   australian_format: MapPin,
+  auto_detected: AlertTriangle,
 };
 
 export function ExecuteSummary({ enabledGroups }: ExecuteSummaryProps) {

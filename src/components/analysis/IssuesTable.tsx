@@ -216,13 +216,20 @@ export function IssuesTable({ issues }: IssuesTableProps) {
                 const Icon = config.icon;
                 const isExpanded = expandedRow === issue.id;
 
+                const isAutoDetected = issue.category === 'auto_detected';
+
                 return (
                   <Fragment key={issue.id}>
                     <tr
                       onClick={() =>
                         setExpandedRow(isExpanded ? null : issue.id)
                       }
-                      className="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50/50"
+                      className={cn(
+                        'cursor-pointer border-b transition-colors',
+                        isAutoDetected
+                          ? 'border-amber-200 bg-amber-50 hover:bg-amber-100/70'
+                          : 'border-gray-100 hover:bg-gray-50/50',
+                      )}
                     >
                       {/* Row # */}
                       <td className="px-4 py-2.5">
@@ -231,26 +238,43 @@ export function IssuesTable({ issues }: IssuesTableProps) {
                           <span className="text-sm font-medium tabular-nums text-gray-900">
                             {issue.row + 1}
                           </span>
+                          {isAutoDetected && (
+                            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                              VERIFY
+                            </span>
+                          )}
                         </div>
                       </td>
 
                       {/* Column */}
                       <td className="px-3 py-2.5">
-                        <span className="text-sm text-gray-700">
+                        <span className={cn(
+                          'text-sm',
+                          isAutoDetected ? 'font-medium text-amber-800' : 'text-gray-700',
+                        )}>
                           {issue.column}
                         </span>
                       </td>
 
                       {/* Current Value */}
                       <td className="px-3 py-2.5">
-                        <span className="text-sm text-red-600 line-through">
-                          {formatCellValue(issue.currentValue)}
-                        </span>
+                        {isAutoDetected ? (
+                          <span className="text-sm font-medium text-amber-700">
+                            {formatCellValue(issue.currentValue)}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-red-600 line-through">
+                            {formatCellValue(issue.currentValue)}
+                          </span>
+                        )}
                       </td>
 
                       {/* Issue */}
                       <td className="max-w-[300px] px-3 py-2.5">
-                        <span className="line-clamp-1 text-sm text-gray-600">
+                        <span className={cn(
+                          'line-clamp-1 text-sm',
+                          isAutoDetected ? 'text-amber-700' : 'text-gray-600',
+                        )}>
                           {issue.message}
                         </span>
                       </td>
@@ -258,7 +282,10 @@ export function IssuesTable({ issues }: IssuesTableProps) {
                       {/* Suggested Fix */}
                       <td className="px-3 py-2.5 pr-4">
                         {issue.suggestedValue !== undefined ? (
-                          <span className="text-sm font-medium text-emerald-600">
+                          <span className={cn(
+                            'text-sm font-medium',
+                            isAutoDetected ? 'text-amber-700' : 'text-emerald-600',
+                          )}>
                             {formatCellValue(issue.suggestedValue)}
                           </span>
                         ) : (

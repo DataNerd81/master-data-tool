@@ -15,7 +15,7 @@ function formatFileSize(bytes: number): string {
 export function DropZone() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const { uploadFile, isLoading, error } = useFileUpload();
+  const { uploadFile, isLoading, error, preProcessSummary } = useFileUpload();
   const workbook = useDataStore((s) => s.workbook);
   const setWorkbook = useDataStore((s) => s.setWorkbook);
   const [file, setFile] = useState<File | null>(null);
@@ -116,6 +116,43 @@ export function DropZone() {
             </button>
           </div>
         </div>
+
+        {/* Pre-processing summary */}
+        {preProcessSummary && (
+          <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+            <p className="text-xs font-semibold text-blue-800 mb-1.5">
+              Smart Pre-Processing Results
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-blue-700">
+              <span>{preProcessSummary.totalInputRows} input rows</span>
+              <span className="h-1 w-1 rounded-full bg-blue-300 self-center" />
+              <span className="font-medium">{preProcessSummary.outputRows} clean data rows</span>
+              {preProcessSummary.skippedJunkRows > 0 && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-blue-300 self-center" />
+                  <span>{preProcessSummary.skippedJunkRows} junk rows removed</span>
+                </>
+              )}
+              {preProcessSummary.skippedSectionHeaders > 0 && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-blue-300 self-center" />
+                  <span>{preProcessSummary.skippedSectionHeaders} section headers processed</span>
+                </>
+              )}
+            </div>
+            {preProcessSummary.regosFound.length > 0 && (
+              <p className="mt-1.5 text-xs text-blue-700">
+                <span className="font-semibold">Regos found:</span>{' '}
+                {preProcessSummary.regosFound.join(', ')}
+              </p>
+            )}
+            {preProcessSummary.unitDefaulted && (
+              <p className="mt-1 text-xs text-blue-600">
+                No unit column detected — defaulted to Litres (L)
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   }

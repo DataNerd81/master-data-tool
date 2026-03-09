@@ -22,6 +22,7 @@ const CATEGORY_WEIGHTS: Record<string, { weight: number; label: string }> = {
   hierarchy: { weight: 5, label: 'Hierarchy' },
   unit: { weight: 0, label: 'Units' }, // Informational, not weighted in score
   australian_format: { weight: 0, label: 'Australian Formats' }, // Informational
+  auto_detected: { weight: 0, label: 'Auto-Detected (Verify)' }, // Informational — needs user review
 };
 
 /**
@@ -58,6 +59,7 @@ function isCategoryApplicable(
 
     case 'unit':
     case 'australian_format':
+    case 'auto_detected':
       return true; // Informational — always shown but never weighted
 
     default:
