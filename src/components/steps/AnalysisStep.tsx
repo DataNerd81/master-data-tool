@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ArrowRight, ArrowLeft, BarChart3, Loader2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { ArrowRight, ArrowLeft, BarChart3, Loader2, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
+import { useValidationStore } from '@/stores/validation-store';
 import { useValidation } from '@/hooks/use-validation';
 import { ReadinessScore } from '@/components/analysis/ReadinessScore';
 import { ScoreBreakdown } from '@/components/analysis/ScoreBreakdown';
@@ -13,6 +15,12 @@ import { cn } from '@/components/ui/cn';
 export function AnalysisStep() {
   const setStep = useAppStore((s) => s.setStep);
   const { validate, result, isValidating } = useValidation();
+  const autoDetectedCells = useValidationStore((s) => s.autoDetectedCells);
+
+  const autoDetectedCount = useMemo(() => {
+    if (!result) return 0;
+    return result.issues.filter((i) => i.category === 'auto_detected').length;
+  }, [result]);
 
   useEffect(() => {
     validate();
@@ -65,6 +73,26 @@ export function AnalysisStep() {
 
       {result.categoryScores.length > 0 && (
         <ScoreBreakdown categoryScores={result.categoryScores} />
+      )}
+
+      {/* Auto-detected fuel types banner */}
+      {autoDetectedCount > 0 && (
+        <div className="rounded-2xl border-2 border-amber-300 bg-amber-50 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-6 w-6 flex-shrink-0 text-amber-600" />
+            <div>
+              <h3 className="text-base font-semibold text-amber-800">
+                {autoDetectedCount} Auto-Detected Fuel Type{autoDetectedCount !== 1 ? 's' : ''} — Please Verify
+              </h3>
+              <p className="mt-1 text-sm text-amber-700">
+                The tool detected NGA Category and Fuel Type values from your data
+                (highlighted in amber below). These are best guesses based on keywords
+                found in your spreadsheet. Please review each one to make sure
+                they&apos;re correct.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       {result.issues.length > 0 && <BeforeAfter issues={result.issues} />}

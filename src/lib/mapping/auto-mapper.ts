@@ -234,20 +234,37 @@ export function inferFuelType(text: string): NGAEntry | null {
 }
 
 /**
+ * Tracks which cells were auto-populated so they can be flagged for review.
+ */
+export interface AutoDetectedCell {
+  row: number;
+  column: string;
+  value: string;
+  matchedFrom: string; // the source text that triggered the detection
+}
+
+export interface AutoPopulateResult {
+  data: DataRow[];
+  autoDetectedCells: AutoDetectedCell[];
+}
+
+/**
  * Auto-populate NGA Category and Fuel Type for each data row by scanning
  * all columns for fuel-related keywords.
  *
  * This function looks through every cell value in a row for clues about
  * what fuel was used, then populates the Category and Fuel Type columns.
+ * It tracks which cells were auto-filled so they can be flagged for user review.
  *
  * @param data       - The mapped data rows (target column names)
- * @returns Updated data rows with Category and Fuel Type populated where possible
+ * @returns Updated data rows and list of auto-detected cells needing verification
  */
-export function autoPopulateFuelType(data: DataRow[]): DataRow[] {
+export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
   const categoryCol = 'Category (from NGA table on right)';
   const fuelTypeCol = 'Fuel Type (from NGA table on right)';
+  const autoDetectedCells: AutoDetectedCell[] = [];
 
-  return data.map((row) => {
+  const updatedData = data.map((row, rowIndex) => {
     const newRow = { ...row };
 
     const existingCat = row[categoryCol];
@@ -258,6 +275,7 @@ export function autoPopulateFuelType(data: DataRow[]): DataRow[] {
 
     // Scan all columns in this row for fuel type clues
     let bestMatch: NGAEntry | null = null;
+    let matchedFrom = '';
 
     for (const [, val] of Object.entries(row)) {
       if (val === null || val === undefined) continue;
@@ -265,6 +283,7 @@ export function autoPopulateFuelType(data: DataRow[]): DataRow[] {
       const match = inferFuelType(textVal);
       if (match) {
         bestMatch = match;
+        matchedFrom = textVal;
         break;
       }
     }
@@ -272,12 +291,26 @@ export function autoPopulateFuelType(data: DataRow[]): DataRow[] {
     if (bestMatch) {
       if (!existingCat) {
         newRow[categoryCol] = bestMatch.category;
+        autoDetectedCells.push({
+          row: rowIndex,
+          column: categoryCol,
+          value: bestMatch.category,
+          matchedFrom,
+        });
       }
       if (!existingFt) {
         newRow[fuelTypeCol] = bestMatch.fuelType;
+        autoDetectedCells.push({
+          row: rowIndex,
+          column: fuelTypeCol,
+          value: bestMatch.fuelType,
+          matchedFrom,
+        });
       }
     }
 
     return newRow;
   });
+
+  return { data: updatedData, autoDetectedCells };
 }

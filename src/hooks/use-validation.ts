@@ -4,9 +4,10 @@ import { useCallback } from 'react';
 import { validateData } from '@/lib/validation/engine';
 import { useValidationStore } from '@/stores/validation-store';
 import { useMappingStore } from '@/stores/mapping-store';
+import { useDataStore } from '@/stores/data-store';
 import { useAppStore } from '@/stores/app-store';
 import { getSchema } from '@/lib/schemas/registry';
-import type { ValidationResult } from '@/types';
+import type { ValidationResult, ValidationIssue } from '@/types';
 
 // ---------------------------------------------------------------------------
 // useValidation — runs the validation engine and stores results
@@ -26,10 +27,12 @@ interface UseValidationReturn {
  *
  * Gets mapped data from the mapping store, runs the validation engine
  * against the selected template schema, and stores the result in the
- * validation store.
+ * validation store. Also injects auto-detected fuel type issues for
+ * user review.
  */
 export function useValidation(): UseValidationReturn {
   const { result, isValidating, setResult, setValidating } = useValidationStore();
+  const autoDetectedCells = useValidationStore((s) => s.autoDetectedCells);
   const { mappings, getMappedData } = useMappingStore();
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
 
@@ -42,10 +45,13 @@ export function useValidation(): UseValidationReturn {
     setValidating(true);
 
     try {
-      // Use mapped data (columns renamed per mappings)
-      const mappedData = getMappedData();
+      // Use active data (which includes auto-populated fuel types)
+      const activeData = useDataStore.getState().activeData;
 
-      if (mappedData.length === 0) {
+      // Fall back to mapped data if activeData is empty
+      const data = activeData.length > 0 ? activeData : getMappedData();
+
+      if (data.length === 0) {
         setResult({
           overallScore: 0,
           categoryScores: [],
@@ -56,7 +62,24 @@ export function useValidation(): UseValidationReturn {
         return;
       }
 
-      const validationResult = validateData(mappedData, schema, mappings);
+      const validationResult = validateData(data, schema, mappings);
+
+      // Inject auto-detected fuel type issues as "needs clarification" warnings
+      if (autoDetectedCells.length > 0) {
+        const autoIssues: ValidationIssue[] = autoDetectedCells.map((cell, idx) => ({
+          id: `auto-detected-${idx}`,
+          row: cell.row,
+          column: cell.column,
+          severity: 'warning' as const,
+          category: 'auto_detected' as const,
+          message: `Auto-detected as "${cell.value}" based on "${cell.matchedFrom}" — please verify`,
+          currentValue: cell.value,
+          suggestedValue: cell.value,
+        }));
+
+        validationResult.issues.push(...autoIssues);
+      }
+
       setResult(validationResult);
     } catch (err) {
       console.error('[useValidation] Validation failed:', err);
@@ -64,7 +87,7 @@ export function useValidation(): UseValidationReturn {
     } finally {
       setValidating(false);
     }
-  }, [selectedTemplateId, mappings, getMappedData, setResult, setValidating]);
+  }, [selectedTemplateId, mappings, getMappedData, setResult, setValidating, autoDetectedCells]);
 
   return { validate, result, isValidating };
 }

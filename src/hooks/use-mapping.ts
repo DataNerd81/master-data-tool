@@ -9,6 +9,7 @@ import {
 import { useMappingStore } from '@/stores/mapping-store';
 import { useDataStore } from '@/stores/data-store';
 import { useAppStore } from '@/stores/app-store';
+import { useValidationStore } from '@/stores/validation-store';
 import { getSchema } from '@/lib/schemas/registry';
 import type { ColumnMapping } from '@/types';
 
@@ -70,13 +71,15 @@ export function useMapping(): UseMappingReturn {
   /**
    * Run fuel type auto-detection: scan all data for fuel keywords and
    * populate the Category and Fuel Type columns on the mapped data.
+   * Stores which cells were auto-filled so they can be flagged for review.
    */
   const autoDetectFuelTypes = useCallback(() => {
     const mappedData = useMappingStore.getState().getMappedData();
     if (mappedData.length === 0) return;
 
-    const updatedData = autoPopulateFuelType(mappedData);
+    const { data: updatedData, autoDetectedCells } = autoPopulateFuelType(mappedData);
     useDataStore.getState().setActiveData(updatedData);
+    useValidationStore.getState().setAutoDetectedCells(autoDetectedCells);
   }, []);
 
   const saveMappings = useCallback(() => {

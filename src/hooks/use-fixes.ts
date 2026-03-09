@@ -48,6 +48,10 @@ const CATEGORY_META: Record<
     label: 'Australian Format Fixes',
     description: 'Fix ABN, postcode, and phone number formatting',
   },
+  auto_detected: {
+    label: 'Auto-Detected Fuel Types — Needs Clarification',
+    description: 'These NGA Category and Fuel Type values were auto-detected from your data and need to be verified',
+  },
 };
 
 interface UseFixesReturn {

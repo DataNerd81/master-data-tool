@@ -90,6 +90,7 @@ export type IssueCategory =
   | 'hierarchy'
   | 'unit'
   | 'australian_format'
+  | 'auto_detected'
 ;
 
 export interface ValidationIssue {
