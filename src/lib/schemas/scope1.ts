@@ -68,7 +68,7 @@ export const scope1TransportSchema: TemplateSchema = {
   icon: 'Truck',
   columns: [
     {
-      name: 'Rego or Asset Number',
+      name: 'Rego/Asset Number/Identifier',
       aliases: [
         'rego', 'registration', 'reg', 'reg no', 'reg number', 'registration number',
         'asset', 'asset number', 'asset no', 'asset id', 'asset code',
@@ -79,10 +79,23 @@ export const scope1TransportSchema: TemplateSchema = {
       ],
       type: 'text',
       required: true,
-      description: 'Vehicle registration or asset number',
+      description: 'Vehicle registration, asset number, or unique identifier',
     },
     {
-      name: 'Data Entry Date',
+      name: 'Products used/Fuel type',
+      aliases: [
+        'product', 'product name', 'product description', 'product type',
+        'fuel', 'fuel type', 'fuel name', 'fuel description', 'fuel product',
+        'fuel source', 'fuel grade', 'fuel kind',
+        'description', 'item', 'item description',
+        'diesel', 'unleaded', 'petrol', 'gasoline',
+      ],
+      type: 'text',
+      required: true,
+      description: 'Product or fuel type (e.g. diesel, unleaded, LPG)',
+    },
+    {
+      name: 'Date of Purchase',
       aliases: [
         'date', 'entry date', 'data entry date', 'data date',
         'transaction date', 'trans date', 'delivery date',
@@ -91,10 +104,10 @@ export const scope1TransportSchema: TemplateSchema = {
       ],
       type: 'date',
       required: true,
-      description: 'Date of the fuel transaction or data entry',
+      description: 'Date of the fuel purchase or transaction',
     },
     {
-      name: 'Quantity (of Fuel)',
+      name: 'Qty of Fuel',
       aliases: [
         'quantity', 'qty', 'amount', 'volume', 'fuel qty', 'fuel quantity',
         'fuel amount', 'fuel volume', 'litres', 'liters', 'consumption',
@@ -103,42 +116,42 @@ export const scope1TransportSchema: TemplateSchema = {
       ],
       type: 'number',
       required: true,
-      description: 'Quantity of fuel consumed',
+      description: 'Quantity of fuel purchased',
       validation: { min: 0 },
     },
     {
-      name: 'Unit (Litres or Kl etc)',
+      name: 'Unit Type',
       aliases: [
         'unit', 'uom', 'unit of measure', 'measurement unit', 'units',
         'measure', 'fuel unit', 'qty unit', 'quantity unit',
+        'litres', 'liters', 'kl', 'kilolitres',
       ],
       type: 'text',
       required: true,
-      description: 'Unit of measurement (e.g. L, kL, gal)',
+      description: 'Unit of measurement (e.g. L, kL). Defaults to L if not found.',
     },
     {
-      name: 'Category (from NGA table on right)',
+      name: 'Category (NGA)',
       aliases: [
         'category', 'nga category', 'vehicle category', 'vehicle type',
         'type', 'class', 'vehicle class', 'asset category', 'asset type',
       ],
       type: 'enum',
       required: true,
-      description: 'NGA vehicle category',
+      description: 'NGA vehicle category (auto-mapped from Products used/Fuel type)',
       allowedValues: getNGACategories(),
       autoDetected: true,
     },
     {
-      name: 'Fuel Type (from NGA table on right)',
+      name: 'Fuel Type (NGA)',
       aliases: [
-        'fuel type', 'nga fuel type', 'fuel', 'fuel name', 'fuel source',
-        'product', 'product name', 'fuel product', 'fuel description',
+        'nga fuel type', 'nga fuel', 'fuel type nga',
       ],
       type: 'text',
       required: true,
-      description: 'NGA fuel type',
+      description: 'NGA fuel type (auto-mapped from Products used/Fuel type)',
       autoDetected: true,
     },
   ],
-  uniqueConstraint: ['Rego or Asset Number', 'Data Entry Date'],
+  uniqueConstraint: ['Rego/Asset Number/Identifier', 'Date of Purchase'],
 };

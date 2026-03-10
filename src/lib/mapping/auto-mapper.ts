@@ -263,8 +263,9 @@ export interface AutoPopulateResult {
  * @returns Updated data rows and list of auto-detected cells needing verification
  */
 export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
-  const categoryCol = 'Category (from NGA table on right)';
-  const fuelTypeCol = 'Fuel Type (from NGA table on right)';
+  const productCol = 'Products used/Fuel type';
+  const categoryCol = 'Category (NGA)';
+  const fuelTypeCol = 'Fuel Type (NGA)';
   const autoDetectedCells: AutoDetectedCell[] = [];
 
   const updatedData = data.map((row, rowIndex) => {
@@ -276,18 +277,32 @@ export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
     // If both are already populated with valid values, skip
     if (existingCat && existingFt) return newRow;
 
-    // Scan all columns in this row for fuel type clues
+    // Prioritise the mapped "Products used/Fuel type" column for detection
     let bestMatch: NGAEntry | null = null;
     let matchedFrom = '';
 
-    for (const [, val] of Object.entries(row)) {
-      if (val === null || val === undefined) continue;
-      const textVal = String(val);
+    const productVal = row[productCol];
+    if (productVal !== null && productVal !== undefined) {
+      const textVal = String(productVal);
       const match = inferFuelType(textVal);
       if (match) {
         bestMatch = match;
         matchedFrom = textVal;
-        break;
+      }
+    }
+
+    // Fallback: scan all other columns if product column didn't match
+    if (!bestMatch) {
+      for (const [colName, val] of Object.entries(row)) {
+        if (colName === productCol || colName === categoryCol || colName === fuelTypeCol) continue;
+        if (val === null || val === undefined) continue;
+        const textVal = String(val);
+        const match = inferFuelType(textVal);
+        if (match) {
+          bestMatch = match;
+          matchedFrom = textVal;
+          break;
+        }
       }
     }
 

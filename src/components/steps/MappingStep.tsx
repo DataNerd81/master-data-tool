@@ -48,20 +48,20 @@ export function MappingStep() {
         </div>
       </div>
 
-      {/* Fuel type auto-detection info */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      {/* NGA auto-mapping info */}
+      <div className="rounded-xl border border-kn-blue/20 bg-kn-blue/5 p-4">
         <div className="flex items-start gap-3">
-          <Fuel className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <Fuel className="mt-0.5 h-5 w-5 flex-shrink-0 text-kn-blue" />
           <div>
-            <p className="text-sm font-medium text-amber-800">
-              Fuel Type Auto-Detection
+            <p className="text-sm font-medium text-kn-blue">
+              Map your 5 columns below
             </p>
-            <p className="mt-0.5 text-xs text-amber-700">
-              When you click &quot;Run Analysis&quot;, the tool will scan your data for
-              keywords like &quot;diesel&quot;, &quot;petrol&quot;, &quot;unleaded&quot;, etc. and
-              automatically populate the NGA Category and Fuel Type columns.
-              You don&apos;t need to map those columns if your data has fuel
-              descriptions anywhere.
+            <p className="mt-0.5 text-xs text-gray-600">
+              Map each of your spreadsheet columns to the 5 fields below.
+              When you click &quot;Run Analysis&quot;, the tool will use your{' '}
+              <strong>Products used/Fuel type</strong> column to automatically
+              determine the NGA Category and NGA Fuel Type, giving you a
+              final output of 7 columns.
             </p>
           </div>
         </div>
