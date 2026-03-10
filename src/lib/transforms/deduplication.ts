@@ -1,20 +1,30 @@
-import type { DataRow, TemplateSchema } from '@/types';
+import type { DataRow, TemplateSchema, CellValue } from '@/types';
 
 // ---------------------------------------------------------------------------
 // Deduplication Transform — removes duplicate rows
 // ---------------------------------------------------------------------------
 
 /**
+ * Normalise a cell value for consistent comparison.
+ */
+function normaliseValue(val: CellValue): string {
+  if (val === null || val === undefined) return '<<null>>';
+  if (val instanceof Date) {
+    const d = String(val.getDate()).padStart(2, '0');
+    const m = String(val.getMonth() + 1).padStart(2, '0');
+    return `${d}/${m}/${val.getFullYear()}`;
+  }
+  if (typeof val === 'number') {
+    return String(Math.round(val * 10000) / 10000);
+  }
+  return String(val).trim().toLowerCase();
+}
+
+/**
  * Build a composite key from a row based on the given columns.
  */
 function buildKey(row: DataRow, columns: string[]): string {
-  return columns
-    .map((col) => {
-      const val = row[col];
-      if (val === null || val === undefined) return '<<null>>';
-      return String(val).trim().toLowerCase();
-    })
-    .join('|||');
+  return columns.map((col) => normaliseValue(row[col])).join('|||');
 }
 
 /**

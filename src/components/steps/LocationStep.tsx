@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, MapPin } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
+import { useDataStore } from '@/stores/data-store';
 import { cn } from '@/components/ui/cn';
 
 /**
@@ -12,6 +13,8 @@ import { cn } from '@/components/ui/cn';
  */
 export function LocationStep() {
   const setStep = useAppStore((s) => s.setStep);
+  const activeData = useDataStore((s) => s.activeData);
+  const setActiveData = useDataStore((s) => s.setActiveData);
   const [wantsLocation, setWantsLocation] = useState<boolean | null>(null);
   const [locationName, setLocationName] = useState('');
 
@@ -20,7 +23,14 @@ export function LocationStep() {
   }
 
   function handleContinue() {
-    // TODO: Apply location to data rows when fully implemented
+    // Apply location to every data row
+    if (wantsLocation && locationName.trim()) {
+      const updated = activeData.map((row) => ({
+        ...row,
+        Location: locationName.trim(),
+      }));
+      setActiveData(updated);
+    }
     setStep('active-dates');
   }
 
