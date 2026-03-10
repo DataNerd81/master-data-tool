@@ -8,6 +8,8 @@ import {
   Trash2,
   Check,
   X,
+  RefreshCw,
+  CheckCircle2,
 } from 'lucide-react';
 import type { DataRow, CellValue, ValidationIssue } from '@/types';
 import { cn } from '@/components/ui/cn';
@@ -29,6 +31,10 @@ interface DataReviewTableProps {
   onEditCell: (rowIndex: number, column: string, newValue: CellValue) => void;
   /** Called when a row is deleted. */
   onDeleteRow: (rowIndex: number) => void;
+  /** Called when the user clicks "Verify Changes" — re-runs validation for the given tab. */
+  onVerify: (tab: IssueTab) => void;
+  /** Set of tab IDs that have been verified/confirmed. */
+  verifiedTabs: Set<IssueTab>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +101,8 @@ export function DataReviewTable({
   columns,
   onEditCell,
   onDeleteRow,
+  onVerify,
+  verifiedTabs,
 }: DataReviewTableProps) {
   const [activeTab, setActiveTab] = useState<IssueTab>('all');
   const [page, setPage] = useState(0);
@@ -231,6 +239,7 @@ export function DataReviewTable({
         {TABS.map((tab) => {
           const count = tabCounts[tab.id];
           const isActive = activeTab === tab.id;
+          const isVerified = verifiedTabs.has(tab.id);
           return (
             <button
               key={tab.id}
@@ -241,6 +250,9 @@ export function DataReviewTable({
                 isActive ? tab.activeColor + ' shadow-sm' : tab.color + ' hover:opacity-80',
               )}
             >
+              {isVerified && tab.id !== 'all' && (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
               {tab.label}
               <span
                 className={cn(
@@ -391,6 +403,63 @@ export function DataReviewTable({
           </tbody>
         </table>
       </div>
+
+      {/* Verify & Confirm section — shown on issue tabs (not All Data) */}
+      {activeTab !== 'all' && (
+        <div className="mt-4">
+          {verifiedTabs.has(activeTab) && tabCounts[activeTab] === 0 ? (
+            <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-3">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-800">
+                  {TABS.find((t) => t.id === activeTab)?.label} — Verified
+                </p>
+                <p className="text-xs text-emerald-600">
+                  All issues in this section have been resolved.
+                </p>
+              </div>
+            </div>
+          ) : verifiedTabs.has(activeTab) && tabCounts[activeTab] > 0 ? (
+            <div className="flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-5 py-3">
+              <div className="flex items-center gap-3">
+                <RefreshCw className="h-5 w-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">
+                    {tabCounts[activeTab]} issue{tabCounts[activeTab] !== 1 ? 's' : ''} remaining
+                  </p>
+                  <p className="text-xs text-amber-600">
+                    Make your changes above, then verify again.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onVerify(activeTab)}
+                className="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-600 active:scale-[0.98]"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Re-verify
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 px-5 py-3">
+              <p className="text-sm text-gray-600">
+                {tabCounts[activeTab] > 0
+                  ? `Review the ${tabCounts[activeTab]} issue${tabCounts[activeTab] !== 1 ? 's' : ''} above, make changes, then verify.`
+                  : 'No issues found in this section.'}
+              </p>
+              <button
+                type="button"
+                onClick={() => onVerify(activeTab)}
+                className="inline-flex items-center gap-2 rounded-lg bg-kn-teal px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-kn-teal/90 active:scale-[0.98]"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {tabCounts[activeTab] === 0 ? 'Confirm Section' : 'Verify Changes'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useCallback } from 'react';
+import { useEffect, useMemo, useCallback, useState } from 'react';
 import {
   ArrowRight,
   ArrowLeft,
@@ -16,7 +16,7 @@ import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
 import { useValidation } from '@/hooks/use-validation';
 import { getSchema } from '@/lib/schemas/registry';
-import { DataReviewTable } from '@/components/analysis/DataReviewTable';
+import { DataReviewTable, type IssueTab } from '@/components/analysis/DataReviewTable';
 import { cn } from '@/components/ui/cn';
 import type { CellValue } from '@/types';
 
@@ -26,6 +26,7 @@ export function AnalysisStep() {
   const activeData = useDataStore((s) => s.activeData);
   const setActiveData = useDataStore((s) => s.setActiveData);
   const { validate, result, isValidating } = useValidation();
+  const [verifiedTabs, setVerifiedTabs] = useState<Set<IssueTab>>(new Set());
 
   // Get the 7 schema column names in order
   const schemaColumns = useMemo(() => {
@@ -65,27 +66,38 @@ export function AnalysisStep() {
     };
   }, [result]);
 
-  // Edit a cell inline
+  // Edit a cell inline — clears verified state since data changed
   const handleEditCell = useCallback(
     (rowIndex: number, column: string, newValue: CellValue) => {
       const updated = [...activeData];
       updated[rowIndex] = { ...updated[rowIndex], [column]: newValue };
       setActiveData(updated);
-      // Re-validate after edit
+      setVerifiedTabs(new Set()); // edits invalidate all verified sections
       setTimeout(() => validate(), 50);
     },
     [activeData, setActiveData, validate],
   );
 
-  // Delete a row
+  // Delete a row — clears verified state since data changed
   const handleDeleteRow = useCallback(
     (rowIndex: number) => {
       const updated = activeData.filter((_, i) => i !== rowIndex);
       setActiveData(updated);
+      setVerifiedTabs(new Set());
       setTimeout(() => validate(), 50);
     },
     [activeData, setActiveData, validate],
   );
+
+  // Verify a specific tab — re-run validation and mark tab as verified
+  const handleVerify = useCallback((tab: IssueTab) => {
+    validate();
+    setVerifiedTabs((prev) => {
+      const next = new Set(prev);
+      next.add(tab);
+      return next;
+    });
+  }, [validate]);
 
   function handleBack() {
     setStep('scan-extract');
@@ -148,76 +160,108 @@ export function AnalysisStep() {
         {/* Missing Data */}
         <div className={cn(
           'rounded-xl border p-4 shadow-sm',
+          verifiedTabs.has('missing') && counts.missing === 0 ? 'border-emerald-200 bg-emerald-50' :
           counts.missing > 0 ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-white',
         )}>
           <div className="flex items-center gap-2">
-            <AlertCircle className={cn('h-5 w-5', counts.missing > 0 ? 'text-red-500' : 'text-gray-300')} />
+            {verifiedTabs.has('missing') && counts.missing === 0 ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <AlertCircle className={cn('h-5 w-5', counts.missing > 0 ? 'text-red-500' : 'text-gray-300')} />
+            )}
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Missing Data
             </span>
           </div>
-          <p className={cn('mt-2 text-2xl font-bold', counts.missing > 0 ? 'text-red-700' : 'text-gray-900')}>
-            {counts.missing}
+          <p className={cn('mt-2 text-2xl font-bold',
+            verifiedTabs.has('missing') && counts.missing === 0 ? 'text-emerald-700' :
+            counts.missing > 0 ? 'text-red-700' : 'text-gray-900',
+          )}>
+            {verifiedTabs.has('missing') && counts.missing === 0 ? 'Verified' : counts.missing}
           </p>
           <p className="text-xs text-gray-400">
-            rows with empty fields
+            {verifiedTabs.has('missing') && counts.missing === 0 ? 'section confirmed' : 'rows with empty fields'}
           </p>
         </div>
 
         {/* Duplicates */}
         <div className={cn(
           'rounded-xl border p-4 shadow-sm',
+          verifiedTabs.has('duplicates') && counts.duplicates === 0 ? 'border-emerald-200 bg-emerald-50' :
           counts.duplicates > 0 ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white',
         )}>
           <div className="flex items-center gap-2">
-            <Copy className={cn('h-5 w-5', counts.duplicates > 0 ? 'text-amber-500' : 'text-gray-300')} />
+            {verifiedTabs.has('duplicates') && counts.duplicates === 0 ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <Copy className={cn('h-5 w-5', counts.duplicates > 0 ? 'text-amber-500' : 'text-gray-300')} />
+            )}
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Duplicates
             </span>
           </div>
-          <p className={cn('mt-2 text-2xl font-bold', counts.duplicates > 0 ? 'text-amber-700' : 'text-gray-900')}>
-            {counts.duplicates}
+          <p className={cn('mt-2 text-2xl font-bold',
+            verifiedTabs.has('duplicates') && counts.duplicates === 0 ? 'text-emerald-700' :
+            counts.duplicates > 0 ? 'text-amber-700' : 'text-gray-900',
+          )}>
+            {verifiedTabs.has('duplicates') && counts.duplicates === 0 ? 'Verified' : counts.duplicates}
           </p>
           <p className="text-xs text-gray-400">
-            duplicate rows found
+            {verifiedTabs.has('duplicates') && counts.duplicates === 0 ? 'section confirmed' : 'duplicate rows found'}
           </p>
         </div>
 
         {/* Negative Qty */}
         <div className={cn(
           'rounded-xl border p-4 shadow-sm',
+          verifiedTabs.has('negatives') && counts.negatives === 0 ? 'border-emerald-200 bg-emerald-50' :
           counts.negatives > 0 ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-white',
         )}>
           <div className="flex items-center gap-2">
-            <MinusCircle className={cn('h-5 w-5', counts.negatives > 0 ? 'text-orange-500' : 'text-gray-300')} />
+            {verifiedTabs.has('negatives') && counts.negatives === 0 ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <MinusCircle className={cn('h-5 w-5', counts.negatives > 0 ? 'text-orange-500' : 'text-gray-300')} />
+            )}
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Negative Qty
             </span>
           </div>
-          <p className={cn('mt-2 text-2xl font-bold', counts.negatives > 0 ? 'text-orange-700' : 'text-gray-900')}>
-            {counts.negatives}
+          <p className={cn('mt-2 text-2xl font-bold',
+            verifiedTabs.has('negatives') && counts.negatives === 0 ? 'text-emerald-700' :
+            counts.negatives > 0 ? 'text-orange-700' : 'text-gray-900',
+          )}>
+            {verifiedTabs.has('negatives') && counts.negatives === 0 ? 'Verified' : counts.negatives}
           </p>
           <p className="text-xs text-gray-400">
-            rows with negative values
+            {verifiedTabs.has('negatives') && counts.negatives === 0 ? 'section confirmed' : 'rows with negative values'}
           </p>
         </div>
 
         {/* Unsure / N/A */}
         <div className={cn(
           'rounded-xl border p-4 shadow-sm',
+          verifiedTabs.has('unsure') && counts.unsure === 0 ? 'border-emerald-200 bg-emerald-50' :
           counts.unsure > 0 ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-white',
         )}>
           <div className="flex items-center gap-2">
-            <HelpCircle className={cn('h-5 w-5', counts.unsure > 0 ? 'text-purple-500' : 'text-gray-300')} />
+            {verifiedTabs.has('unsure') && counts.unsure === 0 ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <HelpCircle className={cn('h-5 w-5', counts.unsure > 0 ? 'text-purple-500' : 'text-gray-300')} />
+            )}
             <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
               Unsure / N/A
             </span>
           </div>
-          <p className={cn('mt-2 text-2xl font-bold', counts.unsure > 0 ? 'text-purple-700' : 'text-gray-900')}>
-            {counts.unsure}
+          <p className={cn('mt-2 text-2xl font-bold',
+            verifiedTabs.has('unsure') && counts.unsure === 0 ? 'text-emerald-700' :
+            counts.unsure > 0 ? 'text-purple-700' : 'text-gray-900',
+          )}>
+            {verifiedTabs.has('unsure') && counts.unsure === 0 ? 'Verified' : counts.unsure}
           </p>
           <p className="text-xs text-gray-400">
-            auto-detected, verify
+            {verifiedTabs.has('unsure') && counts.unsure === 0 ? 'section confirmed' : 'auto-detected, verify'}
           </p>
         </div>
       </div>
@@ -229,6 +273,8 @@ export function AnalysisStep() {
         columns={schemaColumns}
         onEditCell={handleEditCell}
         onDeleteRow={handleDeleteRow}
+        onVerify={handleVerify}
+        verifiedTabs={verifiedTabs}
       />
 
       {/* Navigation */}
