@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Calendar } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
+import { useDataStore } from '@/stores/data-store';
 import { cn } from '@/components/ui/cn';
 
 /**
@@ -11,6 +12,8 @@ import { cn } from '@/components/ui/cn';
  */
 export function ActiveDatesStep() {
   const setStep = useAppStore((s) => s.setStep);
+  const activeData = useDataStore((s) => s.activeData);
+  const setActiveData = useDataStore((s) => s.setActiveData);
   const [activeDate, setActiveDate] = useState('');
 
   function handleBack() {
@@ -18,7 +21,17 @@ export function ActiveDatesStep() {
   }
 
   function handleContinue() {
-    // TODO: Apply active date to data rows when fully implemented
+    // Apply active date to every data row
+    if (activeDate.trim()) {
+      // Convert yyyy-mm-dd from <input type="date"> to dd/mm/yyyy
+      const [y, m, d] = activeDate.split('-');
+      const formatted = `${d}/${m}/${y}`;
+      const updated = activeData.map((row) => ({
+        ...row,
+        'Active Date': formatted,
+      }));
+      setActiveData(updated);
+    }
     setStep('pre-2004');
   }
 

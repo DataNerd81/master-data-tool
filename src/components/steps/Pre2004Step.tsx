@@ -36,8 +36,21 @@ export function Pre2004Step() {
     setStep('active-dates');
   }
 
+  const setActiveData = useDataStore((s) => s.setActiveData);
+
   function handleContinue() {
-    // TODO: Apply pre-2004 flag to selected assets when fully implemented
+    // Apply pre-2004 flag to selected assets
+    if (hasPre2004 && selectedAssets.size > 0) {
+      const regoCol = 'Rego/Asset Number/Identifier';
+      const updated = activeData.map((row) => {
+        const rego = String(row[regoCol] ?? '').trim();
+        return {
+          ...row,
+          'Pre-2004 Asset': selectedAssets.has(rego) ? 'Yes' : 'No',
+        };
+      });
+      setActiveData(updated);
+    }
     setStep('final-export');
   }
 

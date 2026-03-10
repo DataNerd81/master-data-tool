@@ -313,7 +313,7 @@ export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
         if (result) {
           bestMatch = result.entry;
           matchedFrom = textVal;
-          isConfident = false; // fallback column matches always need review
+          isConfident = result.confident; // use the keyword's own confidence
           break;
         }
       }
