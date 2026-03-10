@@ -168,68 +168,77 @@ interface NGAEntry {
  * Keywords that suggest a specific fuel type. Ordered by specificity (most
  * specific first so that e.g. "renewable diesel" matches before "diesel").
  */
-const FUEL_KEYWORDS: { pattern: RegExp; entry: NGAEntry }[] = [
-  // Renewable diesel variants
-  { pattern: /renewable\s*diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iv or higher' } },
-  { pattern: /renewable\s*diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iii' } },
-  { pattern: /renewable\s*diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro i' } },
-  { pattern: /renewable\s*diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Renewable diesel' } },
+const FUEL_KEYWORDS: { pattern: RegExp; entry: NGAEntry; confident: boolean }[] = [
+  // Renewable diesel variants — clear fuel names
+  { pattern: /renewable\s*diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iv or higher' }, confident: true },
+  { pattern: /renewable\s*diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro iii' }, confident: true },
+  { pattern: /renewable\s*diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro i' }, confident: true },
+  { pattern: /renewable\s*diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Renewable diesel' }, confident: true },
 
-  // Diesel variants
-  { pattern: /diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iv or higher' } },
-  { pattern: /diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iii' } },
-  { pattern: /diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' } },
-  { pattern: /diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' } },
+  // Diesel variants — clear fuel names
+  { pattern: /diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iv or higher' }, confident: true },
+  { pattern: /diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iii' }, confident: true },
+  { pattern: /diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' }, confident: true },
+  { pattern: /diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' }, confident: true },
 
   // Petrol / Gasoline — must come AFTER diesel so "Premium Diesel" doesn't match "Premium"
-  { pattern: /\b(petrol|gasoline)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
-  { pattern: /\bunleaded\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
-  { pattern: /\b(ulp|pulp)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
-  { pattern: /\b(e10|e85)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
-  { pattern: /\b(vortex|v-power|bp\s*ultimate)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
-  { pattern: /\b(ron\s*9[1-8]|95\s*octane|98\s*octane)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' } },
+  { pattern: /\b(petrol|gasoline)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\bunleaded\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\b(ulp|pulp)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\b(e10|e85)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\bpremium\s*9[1-8]/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\b(ron\s*9[1-8]|95\s*octane|98\s*octane)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
+  { pattern: /\b(vortex|v-power|bp\s*ultimate)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: false },
 
-  // LPG
-  { pattern: /\b(lpg|liquefied\s*petroleum|autogas)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Liquefied petroleum gas (LPG)' } },
+  // LPG — clear fuel names
+  { pattern: /\b(lpg|liquefied\s*petroleum|autogas)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Liquefied petroleum gas (LPG)' }, confident: true },
 
-  // Biodiesel
-  { pattern: /\bbiodiesel\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Biodiesel' } },
+  // Biodiesel — clear fuel name
+  { pattern: /\bbiodiesel\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Biodiesel' }, confident: true },
 
-  // Ethanol
-  { pattern: /\bethanol\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Ethanol' } },
+  // Ethanol — clear fuel name
+  { pattern: /\bethanol\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Ethanol' }, confident: true },
 
-  // Fuel oil
-  { pattern: /\bfuel\s*oil\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Fuel oil' } },
+  // Fuel oil — clear fuel name
+  { pattern: /\bfuel\s*oil\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Fuel oil' }, confident: true },
 
-  // Other biofuels
-  { pattern: /\bbiofuel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Other biofuels' } },
+  // Other biofuels — ambiguous, flag for review
+  { pattern: /\bbiofuel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Other biofuels' }, confident: false },
 
   // CNG
-  { pattern: /\b(cng|compressed\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Compressed natural gas (Light Duty Vehicle)' } },
+  { pattern: /\b(cng|compressed\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Compressed natural gas (Light Duty Vehicle)' }, confident: true },
 
   // LNG
-  { pattern: /\b(lng|liquefied\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Liquefied natural gas' } },
+  { pattern: /\b(lng|liquefied\s*natural\s*gas)\b/i, entry: { category: 'Light duty vehicles', fuelType: 'Liquefied natural gas' }, confident: true },
 
   // Aviation fuel
-  { pattern: /\b(avgas|aviation\s*gas)/i, entry: { category: 'Aviation', fuelType: 'Gasoline for use as fuel in an aircraft' } },
-  { pattern: /\b(jet\s*fuel|jet\s*a|avtur|aviation\s*kerosene)/i, entry: { category: 'Aviation', fuelType: 'Kerosene for use as fuel in an aircraft' } },
-  { pattern: /\brenewable\s*aviation/i, entry: { category: 'Aviation', fuelType: 'Renewable aviation kerosene' } },
+  { pattern: /\b(avgas|aviation\s*gas)/i, entry: { category: 'Aviation', fuelType: 'Gasoline for use as fuel in an aircraft' }, confident: true },
+  { pattern: /\b(jet\s*fuel|jet\s*a|avtur|aviation\s*kerosene)/i, entry: { category: 'Aviation', fuelType: 'Kerosene for use as fuel in an aircraft' }, confident: true },
+  { pattern: /\brenewable\s*aviation/i, entry: { category: 'Aviation', fuelType: 'Renewable aviation kerosene' }, confident: true },
 ];
+
+export interface FuelInferenceResult {
+  entry: NGAEntry;
+  confident: boolean;
+}
 
 /**
  * Attempt to infer the NGA Category and Fuel Type from text that might
  * appear in a messy spreadsheet (e.g. product descriptions, column values).
  *
- * Returns null if no match is found.
+ * Returns null if no match is found. When a match is found, includes a
+ * `confident` flag indicating whether the mapping is obviously correct
+ * (e.g. "DIESEL" → Diesel oil) or needs user verification (e.g. brand
+ * names, vague product descriptions).
  */
-export function inferFuelType(text: string): NGAEntry | null {
+export function inferFuelType(text: string): FuelInferenceResult | null {
   if (!text || typeof text !== 'string') return null;
   const normalised = text.trim();
   if (!normalised) return null;
 
-  for (const { pattern, entry } of FUEL_KEYWORDS) {
+  for (const { pattern, entry, confident } of FUEL_KEYWORDS) {
     if (pattern.test(normalised)) {
-      return entry;
+      return { entry, confident };
     }
   }
 
@@ -280,27 +289,31 @@ export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
     // Prioritise the mapped "Products used/Fuel type" column for detection
     let bestMatch: NGAEntry | null = null;
     let matchedFrom = '';
+    let isConfident = false;
 
     const productVal = row[productCol];
     if (productVal !== null && productVal !== undefined) {
       const textVal = String(productVal);
-      const match = inferFuelType(textVal);
-      if (match) {
-        bestMatch = match;
+      const result = inferFuelType(textVal);
+      if (result) {
+        bestMatch = result.entry;
         matchedFrom = textVal;
+        isConfident = result.confident;
       }
     }
 
     // Fallback: scan all other columns if product column didn't match
+    // Fallback matches are always flagged as unsure
     if (!bestMatch) {
       for (const [colName, val] of Object.entries(row)) {
         if (colName === productCol || colName === categoryCol || colName === fuelTypeCol) continue;
         if (val === null || val === undefined) continue;
         const textVal = String(val);
-        const match = inferFuelType(textVal);
-        if (match) {
-          bestMatch = match;
+        const result = inferFuelType(textVal);
+        if (result) {
+          bestMatch = result.entry;
           matchedFrom = textVal;
+          isConfident = false; // fallback column matches always need review
           break;
         }
       }
@@ -309,21 +322,26 @@ export function autoPopulateFuelType(data: DataRow[]): AutoPopulateResult {
     if (bestMatch) {
       if (!existingCat) {
         newRow[categoryCol] = bestMatch.category;
-        autoDetectedCells.push({
-          row: rowIndex,
-          column: categoryCol,
-          value: bestMatch.category,
-          matchedFrom,
-        });
+        // Only flag for review if the detection is NOT confident
+        if (!isConfident) {
+          autoDetectedCells.push({
+            row: rowIndex,
+            column: categoryCol,
+            value: bestMatch.category,
+            matchedFrom,
+          });
+        }
       }
       if (!existingFt) {
         newRow[fuelTypeCol] = bestMatch.fuelType;
-        autoDetectedCells.push({
-          row: rowIndex,
-          column: fuelTypeCol,
-          value: bestMatch.fuelType,
-          matchedFrom,
-        });
+        if (!isConfident) {
+          autoDetectedCells.push({
+            row: rowIndex,
+            column: fuelTypeCol,
+            value: bestMatch.fuelType,
+            matchedFrom,
+          });
+        }
       }
     }
 
