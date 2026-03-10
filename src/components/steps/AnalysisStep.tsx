@@ -28,11 +28,11 @@ export function AnalysisStep() {
   }, []);
 
   function handleBack() {
-    setStep('mapping');
+    setStep('scan-extract');
   }
 
   function handleContinue() {
-    setStep('fixes');
+    setStep('sign-off');
   }
 
   if (isValidating || !result) {

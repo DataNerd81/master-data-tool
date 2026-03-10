@@ -44,7 +44,7 @@ export function ExecuteStep() {
   })();
 
   function handleBack() {
-    setStep('fixes');
+    setStep('pre-2004');
   }
 
   function handleStartOver() {

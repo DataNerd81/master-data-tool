@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
-import { ArrowRight, Sparkles, Truck } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Sparkles, Truck } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
 import { DropZone } from '@/components/upload/DropZone';
@@ -10,20 +9,18 @@ import { cn } from '@/components/ui/cn';
 
 export function UploadStep() {
   const setStep = useAppStore((s) => s.setStep);
-  const setTemplate = useAppStore((s) => s.setTemplate);
   const workbook = useDataStore((s) => s.workbook);
   const selectedSheets = useDataStore((s) => s.selectedSheets);
 
-  // Auto-select the only template on mount
-  useEffect(() => {
-    setTemplate('scope1-transport');
-  }, [setTemplate]);
-
   const canContinue = workbook !== null && selectedSheets.length > 0;
+
+  function handleBack() {
+    setStep('hierarchy');
+  }
 
   function handleContinue() {
     if (!canContinue) return;
-    setStep('mapping');
+    setStep('scan-extract');
   }
 
   return (
@@ -75,8 +72,16 @@ export function UploadStep() {
         </div>
       )}
 
-      {/* Continue Button */}
-      <div className="flex justify-center">
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
         <button
           type="button"
           disabled={!canContinue}
@@ -88,7 +93,7 @@ export function UploadStep() {
               : 'cursor-not-allowed bg-gray-200 text-gray-400',
           )}
         >
-          Continue to Mapping
+          Continue to Scan
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

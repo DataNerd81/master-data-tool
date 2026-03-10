@@ -144,12 +144,43 @@ export interface FixSample {
 
 // --- App State Types ---
 
-export type WizardStep = 'upload' | 'mapping' | 'analysis' | 'fixes' | 'execute';
+export type WizardStep =
+  | 'template'           // 1. Select mandatory field document
+  | 'naming-convention'  // 2. Naming convention document (optional)
+  | 'hierarchy'          // 3. Hierarchy structure document (optional)
+  | 'upload'             // 4. Upload messy file
+  | 'scan-extract'       // 5. Scan & extract data
+  | 'review-dashboard'   // 6. Review 7 columns + dashboard
+  | 'sign-off'           // 7. Sign off on fixes & NGA mapping
+  | 'location'           // 8. Assign location to assets
+  | 'active-dates'       // 9. Set active dates
+  | 'pre-2004'           // 10. Pre-2004 asset flagging
+  | 'final-export'       // 11. Final export
+;
 
-export const WIZARD_STEPS: { id: WizardStep; label: string; path: string }[] = [
-  { id: 'upload', label: 'Upload', path: '/' },
-  { id: 'mapping', label: 'Map Columns', path: '/mapping' },
-  { id: 'analysis', label: 'Analysis', path: '/analysis' },
-  { id: 'fixes', label: 'Fix Recommendations', path: '/fixes' },
-  { id: 'execute', label: 'Execute & Export', path: '/execute' },
+export type WizardPhase = 'Setup' | 'Process' | 'Enrich' | 'Export';
+
+export interface WizardStepDef {
+  id: WizardStep;
+  label: string;
+  shortLabel: string;
+  phase: WizardPhase;
+}
+
+export const WIZARD_STEPS: WizardStepDef[] = [
+  // Setup phase
+  { id: 'template',          label: 'Select Template',       shortLabel: 'Template',   phase: 'Setup' },
+  { id: 'naming-convention', label: 'Naming Convention',     shortLabel: 'Naming',     phase: 'Setup' },
+  { id: 'hierarchy',         label: 'Hierarchy Structure',   shortLabel: 'Hierarchy',  phase: 'Setup' },
+  // Process phase
+  { id: 'upload',            label: 'Upload Data',           shortLabel: 'Upload',     phase: 'Process' },
+  { id: 'scan-extract',      label: 'Scan & Extract',        shortLabel: 'Scan',       phase: 'Process' },
+  { id: 'review-dashboard',  label: 'Review & Dashboard',    shortLabel: 'Review',     phase: 'Process' },
+  { id: 'sign-off',          label: 'Sign Off',              shortLabel: 'Sign Off',   phase: 'Process' },
+  // Enrich phase
+  { id: 'location',          label: 'Assign Location',       shortLabel: 'Location',   phase: 'Enrich' },
+  { id: 'active-dates',      label: 'Active Dates',          shortLabel: 'Dates',      phase: 'Enrich' },
+  { id: 'pre-2004',          label: 'Pre-2004 Assets',       shortLabel: 'Pre-2004',   phase: 'Enrich' },
+  // Export phase
+  { id: 'final-export',      label: 'Final Export',          shortLabel: 'Export',      phase: 'Export' },
 ];
