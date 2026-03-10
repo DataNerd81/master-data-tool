@@ -47,8 +47,8 @@ export function StepWizard() {
       className="sticky top-0 z-10 border-b border-gray-200 bg-white"
       aria-label="Wizard progress"
     >
-      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto max-w-7xl px-3 py-2.5 sm:px-4 lg:px-6">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           {phases.map((group, phaseIdx) => {
             const phaseColor = PHASE_COLORS[group.phase];
             const firstStepGlobalIdx = WIZARD_STEPS.findIndex(
@@ -59,11 +59,11 @@ export function StepWizard() {
             const isPhaseCompleted = currentIndex > lastStepGlobalIdx;
 
             return (
-              <div key={group.phase} className="flex items-center gap-3 flex-1 min-w-0">
+              <div key={group.phase} className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 {/* Phase group */}
                 <div
                   className={cn(
-                    'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-all',
+                    'flex items-center gap-1 rounded-lg border px-1.5 py-1 sm:px-2 sm:py-1.5 transition-all',
                     isPhaseActive
                       ? `${phaseColor.bg} ${phaseColor.border} shadow-sm`
                       : isPhaseCompleted
@@ -74,7 +74,7 @@ export function StepWizard() {
                   {/* Phase label */}
                   <span
                     className={cn(
-                      'hidden text-[10px] font-bold uppercase tracking-wider lg:block',
+                      'hidden text-[9px] font-bold uppercase tracking-wider xl:block',
                       isPhaseActive
                         ? phaseColor.text
                         : isPhaseCompleted
@@ -84,10 +84,10 @@ export function StepWizard() {
                   >
                     {group.phase}
                   </span>
-                  <span className="hidden lg:block text-gray-200">|</span>
+                  <span className="hidden xl:block text-gray-200 text-[10px]">|</span>
 
                   {/* Steps within phase */}
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5">
                     {group.steps.map((step) => {
                       const globalIdx = WIZARD_STEPS.findIndex((s) => s.id === step.id);
                       const isCompleted = globalIdx < currentIndex;
@@ -102,7 +102,7 @@ export function StepWizard() {
                           disabled={!isCompleted}
                           title={step.label}
                           className={cn(
-                            'group relative flex items-center gap-1',
+                            'group relative flex items-center gap-0.5',
                             isCompleted && 'cursor-pointer',
                             isFuture && 'cursor-default',
                           )}
@@ -110,7 +110,7 @@ export function StepWizard() {
                           {/* Circle */}
                           <span
                             className={cn(
-                              'flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all',
+                              'flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition-all',
                               isCompleted &&
                                 'bg-kn-blue text-white group-hover:bg-kn-blue/80',
                               isCurrent &&
@@ -120,7 +120,7 @@ export function StepWizard() {
                           >
                             {isCompleted ? (
                               <svg
-                                className="h-3.5 w-3.5"
+                                className="h-3 w-3"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -136,15 +136,15 @@ export function StepWizard() {
                               globalIdx + 1
                             )}
                           </span>
-                          {/* Short label - only show for current step or on larger screens */}
+                          {/* Short label - only show for current step on md+, all labels on 2xl+ */}
                           <span
                             className={cn(
-                              'text-[11px] font-medium whitespace-nowrap',
+                              'text-[10px] font-medium whitespace-nowrap',
                               isCurrent
-                                ? 'text-kn-teal block'
+                                ? 'text-kn-teal hidden sm:block'
                                 : isCompleted
-                                  ? 'text-gray-500 hidden xl:block'
-                                  : 'text-gray-300 hidden xl:block',
+                                  ? 'text-gray-500 hidden 2xl:block'
+                                  : 'text-gray-300 hidden 2xl:block',
                             )}
                           >
                             {step.shortLabel}
@@ -157,7 +157,7 @@ export function StepWizard() {
 
                 {/* Phase connector */}
                 {phaseIdx < phases.length - 1 && (
-                  <div className="hidden h-0.5 w-4 flex-shrink-0 sm:block">
+                  <div className="hidden h-0.5 w-2 flex-shrink-0 sm:block sm:w-3">
                     <div
                       className={cn(
                         'h-full rounded-full',
