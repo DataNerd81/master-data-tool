@@ -15,11 +15,11 @@ const fs = require("fs");
 // ---------------------------------------------------------------------------
 function buildCleanData() {
   const header = [
-    "Vehicle Rego",    // should map to "Rego or Asset Number"
-    "Transaction Date", // should map to "Data Entry Date"
+    "Vehicle Rego",    // should map to "Rego/Asset Number/Identifier"
+    "Transaction Date", // should map to "Date of Purchase"
     "Location",        // unmapped
-    "Product",         // should help with fuel type auto-detection
-    "Litres",          // should map to "Quantity (of Fuel)"
+    "Product",         // should map to "Products used/Fuel type"
+    "Litres",          // should map to "Qty of Fuel"
     "Cost Ex GST",     // unmapped
     "Odometer",        // unmapped
   ];

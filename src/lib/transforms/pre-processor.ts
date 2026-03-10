@@ -178,7 +178,7 @@ export interface PreProcessResult {
  * 1. Scans for section header rows containing rego numbers
  * 2. Extracts regos and propagates them to transaction rows below
  * 3. Filters out junk rows (totals, fees, empty rows)
- * 4. Injects a "Rego or Asset Number" column if one doesn't exist
+ * 4. Injects a "Rego/Asset Number/Identifier" column if one doesn't exist
  * 5. Defaults the unit to "L" if no unit column exists
  *
  * @param sheet - The parsed sheet from the Excel parser
@@ -247,7 +247,7 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
 
     // Inject rego if we have one and there's no rego column
     if (!existingRegoCol && currentRego) {
-      cleanRow['Rego or Asset Number'] = currentRego;
+      cleanRow['Rego/Asset Number/Identifier'] = currentRego;
     }
 
     // Default unit to "L" if no unit column exists
@@ -261,7 +261,7 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
   // Build updated headers
   const updatedHeaders = [...headers];
   if (!existingRegoCol && regosFound.length > 0) {
-    updatedHeaders.unshift('Rego or Asset Number');
+    updatedHeaders.unshift('Rego/Asset Number/Identifier');
   }
   if (!hasUnitCol) {
     updatedHeaders.push('Unit');

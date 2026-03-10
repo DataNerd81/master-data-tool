@@ -51,8 +51,8 @@ export function UploadStep() {
               Scope 1 Transport Template
             </p>
             <p className="text-xs text-gray-500">
-              Extracts: Rego/Asset Number, Data Entry Date, Fuel Quantity, Unit,
-              NGA Category, NGA Fuel Type
+              Maps 5 columns: Rego/Asset, Products/Fuel Type, Date, Qty, Unit
+              — then auto-maps NGA Category &amp; Fuel Type (7 total)
             </p>
           </div>
         </div>

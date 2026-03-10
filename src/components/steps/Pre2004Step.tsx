@@ -21,7 +21,7 @@ export function Pre2004Step() {
   // Extract unique rego/asset numbers from data
   const uniqueAssets = useMemo(() => {
     if (!activeData?.length) return [];
-    const regoCol = 'Rego or Asset Number';
+    const regoCol = 'Rego/Asset Number/Identifier';
     const assets = new Set<string>();
     for (const row of activeData) {
       const val = row[regoCol];

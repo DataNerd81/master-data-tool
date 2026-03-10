@@ -60,45 +60,43 @@ export function ColumnMapper() {
     return map;
   }, [workbook, selectedSheets]);
 
-  // Compute mapping statistics (auto-detected fields count as handled)
+  // Only count user-mappable columns (exclude autoDetected)
+  const mappableColumns = useMemo(
+    () => schema?.columns.filter((c) => !c.autoDetected) ?? [],
+    [schema],
+  );
+
+  // Compute mapping statistics for the 5 mappable fields only
   const stats = useMemo(() => {
     if (!schema) return { total: 0, mapped: 0, requiredTotal: 0, requiredMapped: 0 };
-    const total = schema.columns.length;
-    const autoDetectedCount = schema.columns.filter((c) => c.autoDetected).length;
+    const total = mappableColumns.length;
     const mapped = mappings.filter(
       (m) => m.targetColumn !== null,
-    ).length + autoDetectedCount;
-    const requiredCols = schema.columns.filter((c) => c.required);
+    ).length;
+    const requiredCols = mappableColumns.filter((c) => c.required);
     const requiredTotal = requiredCols.length;
     const mappedTargets = new Set(
       mappings.filter((m) => m.targetColumn !== null).map((m) => m.targetColumn),
     );
     const requiredMapped = requiredCols.filter((c) =>
-      mappedTargets.has(c.name) || c.autoDetected,
+      mappedTargets.has(c.name),
     ).length;
     return { total, mapped, requiredTotal, requiredMapped };
-  }, [schema, mappings]);
+  }, [schema, mappings, mappableColumns]);
 
   // Build pre-processed hints for fields the pre-processor injected
   const preProcessedHints = useMemo(() => {
     const hints = new Map<string, PreProcessedHint>();
 
-    // NGA Category and Fuel Type are always auto-detected (regardless of pre-processing)
-    hints.set('Category (from NGA table on right)', {
-      message: 'Will be auto-detected from your data',
-      detail: 'We\'ll scan for keywords like "diesel", "petrol", "unleaded" and map them to the correct NGA category.',
-    });
-    hints.set('Fuel Type (from NGA table on right)', {
-      message: 'Will be auto-detected from your data',
-      detail: 'Fuel types will be inferred from product descriptions in your spreadsheet.',
-    });
+    // NGA Category and Fuel Type are auto-mapped later — no hints needed here
+    // (they are hidden from the mapping table via the autoDetected filter)
 
     if (!preProcessSummary) return hints;
 
     // Rego was extracted from section headers
     if (preProcessSummary.regosFound.length > 0) {
       const regos = preProcessSummary.regosFound.join(', ');
-      hints.set('Rego or Asset Number', {
+      hints.set('Rego/Asset Number/Identifier', {
         message: `Found ${preProcessSummary.regosFound.length} rego${preProcessSummary.regosFound.length !== 1 ? 's' : ''} in your data`,
         detail: `Your regos aren't in a clear column, but we extracted them from the section headers: ${regos}`,
       });
@@ -106,7 +104,7 @@ export function ColumnMapper() {
 
     // Unit was defaulted to "L"
     if (preProcessSummary.unitDefaulted) {
-      hints.set('Unit (Litres or Kl etc)', {
+      hints.set('Unit Type', {
         message: 'Defaulted to Litres (L)',
         detail: 'No unit column was found in your data, so we\'ve set it to Litres. You can change this if needed.',
       });
@@ -214,7 +212,7 @@ export function ColumnMapper() {
             </tr>
           </thead>
           <tbody>
-            {schema.columns.map((col) => {
+            {mappableColumns.map((col) => {
               // Find the mapping that targets this schema column
               const mapping = mappings.find(
                 (m) => m.targetColumn === col.name,
