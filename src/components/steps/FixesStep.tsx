@@ -11,11 +11,11 @@ export function FixesStep() {
   const { fixGroups, toggleFix, toggleAll, enabledFixes } = useFixes();
 
   function handleBack() {
-    setStep('analysis');
+    setStep('review-dashboard');
   }
 
   function handleContinue() {
-    setStep('execute');
+    setStep('location');
   }
 
   return (
@@ -59,7 +59,7 @@ export function FixesStep() {
               : 'bg-gray-200 text-gray-500',
           )}
         >
-          Execute Changes
+          Continue
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>

@@ -22,9 +22,9 @@ export function MappingStep() {
   }
 
   function handleContinue() {
-    // Run fuel type auto-detection before proceeding to analysis
+    // Run fuel type auto-detection before proceeding to review
     autoDetectFuelTypes();
-    setStep('analysis');
+    setStep('review-dashboard');
   }
 
   return (

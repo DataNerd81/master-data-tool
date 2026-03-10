@@ -15,7 +15,7 @@ interface AppState {
 }
 
 const initialState = {
-  currentStep: 'upload' as WizardStep,
+  currentStep: 'template' as WizardStep,
   selectedTemplateId: null as string | null,
 };
 
