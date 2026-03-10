@@ -153,5 +153,5 @@ export const scope1TransportSchema: TemplateSchema = {
       autoDetected: true,
     },
   ],
-  uniqueConstraint: ['Rego/Asset Number/Identifier', 'Date of Purchase'],
+  uniqueConstraint: ['Rego/Asset Number/Identifier', 'Products used/Fuel type', 'Date of Purchase', 'Qty of Fuel'],
 };
