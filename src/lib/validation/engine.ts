@@ -11,6 +11,7 @@ import { checkNamingConventions } from './rules/naming-conventions';
 import { checkDataTypes } from './rules/data-types';
 import { checkDateFormats } from './rules/date-formats';
 import { checkDuplicates } from './rules/duplicates';
+import { checkMixedFuelTypes } from './rules/mixed-fuel-types';
 import { checkHierarchy } from './rules/hierarchy';
 import { checkUnits } from './rules/units';
 import { checkAustralianFormats } from './rules/australian-formats';
@@ -29,6 +30,7 @@ const RULES: ((data: DataRow[], schema: TemplateSchema) => ValidationIssue[])[] 
   checkDataTypes,
   checkDateFormats,
   checkDuplicates,
+  checkMixedFuelTypes,
   checkHierarchy,
   checkUnits,
   checkAustralianFormats,
