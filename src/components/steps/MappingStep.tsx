@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
-import { ArrowRight, ArrowLeft, Columns3, Fuel } from 'lucide-react';
+import { useMemo, useEffect, useState } from 'react';
+import { ArrowRight, ArrowLeft, Columns3, Fuel, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
+import { useDataStore } from '@/stores/data-store';
 import { getSchema } from '@/lib/schemas/registry';
 import { useMapping } from '@/hooks/use-mapping';
 import { ColumnMapper } from '@/components/mapping/ColumnMapper';
@@ -10,12 +11,30 @@ import { ColumnMapper } from '@/components/mapping/ColumnMapper';
 export function MappingStep() {
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
   const setStep = useAppStore((s) => s.setStep);
-  const { autoDetectFuelTypes } = useMapping();
+  const preProcessSummary = useDataStore((s) => s.preProcessSummary);
+  const { autoMap, autoDetectFuelTypes } = useMapping();
+  const [autoSkipping, setAutoSkipping] = useState(false);
 
   const schema = useMemo(
     () => (selectedTemplateId ? getSchema(selectedTemplateId) : undefined),
     [selectedTemplateId],
   );
+
+  // Auto-skip mapping for pre-processed files (e.g. AmpolCard)
+  const isPreProcessed = !!(preProcessSummary && preProcessSummary.regosFound.length > 0);
+
+  useEffect(() => {
+    if (!isPreProcessed) return;
+    setAutoSkipping(true);
+    // Run auto-mapping, then fuel detection, then skip to review
+    autoMap();
+    const timer = setTimeout(() => {
+      autoDetectFuelTypes();
+      setStep('review-dashboard');
+    }, 150);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPreProcessed]);
 
   function handleBack() {
     setStep('upload');
@@ -25,6 +44,20 @@ export function MappingStep() {
     // Run fuel type auto-detection before proceeding to review
     autoDetectFuelTypes();
     setStep('review-dashboard');
+  }
+
+  if (autoSkipping) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <Loader2 className="mb-4 h-10 w-10 animate-spin text-kn-teal" />
+        <p className="text-sm font-medium text-gray-700">
+          Pre-processed data detected
+        </p>
+        <p className="mt-1 text-xs text-gray-500">
+          Auto-mapping columns and detecting fuel types...
+        </p>
+      </div>
+    );
   }
 
   return (

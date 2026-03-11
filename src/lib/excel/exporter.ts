@@ -26,9 +26,18 @@ function formatCellForExport(value: CellValue): string | number | boolean {
 }
 
 /**
+ * Enrichment columns added by the Location, Active Dates, and Pre-2004 steps.
+ * These appear immediately after the schema columns in the export.
+ */
+const ENRICHMENT_COLUMNS = ['Location', 'Active Date', 'Pre-2004 Asset'];
+
+/**
  * Export data to an Excel file with schema-based column ordering,
  * styled headers, auto-width columns, and an NGA reference table sheet.
  * Triggers a browser download.
+ *
+ * Only schema columns and known enrichment columns are exported — all
+ * other columns from the source data are stripped.
  *
  * @param data      - The data rows to export
  * @param schema    - The target template schema defining column order
@@ -39,18 +48,15 @@ export function exportToExcel(
   schema: TemplateSchema,
   fileName?: string,
 ): void {
-  // Determine column order: schema columns first, then any extra columns
+  // Schema columns first, then enrichment columns that exist in the data
   const schemaColNames = schema.columns.map((c) => c.name);
-  const allKeys = new Set<string>();
-  for (const row of data) {
-    for (const key of Object.keys(row)) {
-      allKeys.add(key);
-    }
-  }
-  const extraCols = Array.from(allKeys).filter(
-    (k) => !schemaColNames.includes(k),
+
+  // Only include enrichment columns that have at least one non-empty value
+  const presentEnrichment = ENRICHMENT_COLUMNS.filter((col) =>
+    data.some((row) => row[col] !== undefined && row[col] !== null && row[col] !== ''),
   );
-  const orderedColumns = [...schemaColNames, ...extraCols];
+
+  const orderedColumns = [...schemaColNames, ...presentEnrichment];
 
   // Build the sheet data as an array of arrays
   const sheetData: (string | number | boolean)[][] = [];
