@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
+import { useValidationStore } from '@/stores/validation-store';
 import { useValidation } from '@/hooks/use-validation';
 import { getSchema } from '@/lib/schemas/registry';
 import { DataReviewTable, type IssueTab } from '@/components/analysis/DataReviewTable';
@@ -26,6 +27,8 @@ export function AnalysisStep() {
   const activeData = useDataStore((s) => s.activeData);
   const setActiveData = useDataStore((s) => s.setActiveData);
   const { validate, result, isValidating } = useValidation();
+  const dismissRow = useValidationStore((s) => s.dismissRow);
+  const clearDismissedRows = useValidationStore((s) => s.clearDismissedRows);
   const [verifiedTabs, setVerifiedTabs] = useState<Set<IssueTab>>(new Set());
 
   // Get the 7 schema column names in order
@@ -73,9 +76,10 @@ export function AnalysisStep() {
       updated[rowIndex] = { ...updated[rowIndex], [column]: newValue };
       setActiveData(updated);
       setVerifiedTabs(new Set()); // edits invalidate all verified sections
+      clearDismissedRows(); // data changed, reset dismissals
       setTimeout(() => validate(), 50);
     },
-    [activeData, setActiveData, validate],
+    [activeData, setActiveData, validate, clearDismissedRows],
   );
 
   // Delete a row — clears verified state since data changed
@@ -84,9 +88,19 @@ export function AnalysisStep() {
       const updated = activeData.filter((_, i) => i !== rowIndex);
       setActiveData(updated);
       setVerifiedTabs(new Set());
+      clearDismissedRows(); // data changed, reset dismissals
       setTimeout(() => validate(), 50);
     },
-    [activeData, setActiveData, validate],
+    [activeData, setActiveData, validate, clearDismissedRows],
+  );
+
+  // Confirm a row is correct — dismiss its issues from review
+  const handleDismissRow = useCallback(
+    (rowIndex: number) => {
+      dismissRow(rowIndex);
+      setTimeout(() => validate(), 50);
+    },
+    [dismissRow, validate],
   );
 
   // Verify a specific tab — re-run validation and mark tab as verified
@@ -273,6 +287,7 @@ export function AnalysisStep() {
         columns={schemaColumns}
         onEditCell={handleEditCell}
         onDeleteRow={handleDeleteRow}
+        onDismissRow={handleDismissRow}
         onVerify={handleVerify}
         verifiedTabs={verifiedTabs}
       />

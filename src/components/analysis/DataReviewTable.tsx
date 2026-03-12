@@ -31,6 +31,8 @@ interface DataReviewTableProps {
   onEditCell: (rowIndex: number, column: string, newValue: CellValue) => void;
   /** Called when a row is deleted. */
   onDeleteRow: (rowIndex: number) => void;
+  /** Called when the user confirms a row is correct (dismisses its issues). */
+  onDismissRow: (rowIndex: number) => void;
   /** Called when the user clicks "Verify Changes" — re-runs validation for the given tab. */
   onVerify: (tab: IssueTab) => void;
   /** Set of tab IDs that have been verified/confirmed. */
@@ -101,6 +103,7 @@ export function DataReviewTable({
   columns,
   onEditCell,
   onDeleteRow,
+  onDismissRow,
   onVerify,
   verifiedTabs,
 }: DataReviewTableProps) {
@@ -378,6 +381,16 @@ export function DataReviewTable({
                     {/* Actions */}
                     <td className="px-2 py-1.5 text-center">
                       <div className="flex items-center justify-center gap-1">
+                        {activeTab !== 'all' && rowIssueMap.has(rowIdx) && (
+                          <button
+                            type="button"
+                            title="Confirm row is correct"
+                            onClick={() => onDismissRow(rowIdx)}
+                            className="rounded p-1 text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           title="Edit row"
