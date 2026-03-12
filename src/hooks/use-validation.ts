@@ -33,6 +33,7 @@ interface UseValidationReturn {
 export function useValidation(): UseValidationReturn {
   const { result, isValidating, setResult, setValidating } = useValidationStore();
   const autoDetectedCells = useValidationStore((s) => s.autoDetectedCells);
+  const dismissedRows = useValidationStore((s) => s.dismissedRows);
   const { mappings, getMappedData } = useMappingStore();
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
 
@@ -80,6 +81,16 @@ export function useValidation(): UseValidationReturn {
         validationResult.issues.push(...autoIssues);
       }
 
+      // Remove issues for rows the user has confirmed as correct
+      if (dismissedRows.size > 0) {
+        validationResult.issues = validationResult.issues.filter(
+          (issue) => !dismissedRows.has(issue.row),
+        );
+        // Recalculate clean rows after removing dismissed issues
+        const rowsWithIssues = new Set(validationResult.issues.map((i) => i.row));
+        validationResult.cleanRows = validationResult.totalRows - rowsWithIssues.size;
+      }
+
       setResult(validationResult);
     } catch (err) {
       console.error('[useValidation] Validation failed:', err);
@@ -87,7 +98,7 @@ export function useValidation(): UseValidationReturn {
     } finally {
       setValidating(false);
     }
-  }, [selectedTemplateId, mappings, getMappedData, setResult, setValidating, autoDetectedCells]);
+  }, [selectedTemplateId, mappings, getMappedData, setResult, setValidating, autoDetectedCells, dismissedRows]);
 
   return { validate, result, isValidating };
 }
