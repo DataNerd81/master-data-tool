@@ -92,7 +92,7 @@ export function ExecuteStep() {
         </div>
       </div>
 
-      {!hasExecuted && !isRunning && (
+      {!hasExecuted && !isRunning && enabledFixes.length > 0 && (
         <>
           <ExecuteSummary enabledGroups={enabledFixes} />
 
@@ -100,19 +100,29 @@ export function ExecuteStep() {
             <button
               type="button"
               onClick={handleExecute}
-              disabled={enabledFixes.length === 0}
-              className={cn(
-                'inline-flex items-center gap-2.5 rounded-xl px-8 py-4 text-base font-semibold shadow-md transition-all',
-                enabledFixes.length > 0
-                  ? 'bg-kn-teal text-white hover:bg-kn-teal/90 hover:shadow-lg active:scale-[0.98]'
-                  : 'cursor-not-allowed bg-gray-200 text-gray-400',
-              )}
+              className="inline-flex items-center gap-2.5 rounded-xl bg-kn-teal px-8 py-4 text-base font-semibold text-white shadow-md transition-all hover:bg-kn-teal/90 hover:shadow-lg active:scale-[0.98]"
             >
               <Play className="h-5 w-5" />
               Execute All Changes
             </button>
           </div>
         </>
+      )}
+
+      {!hasExecuted && !isRunning && enabledFixes.length === 0 && (
+        <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-8">
+          <div className="flex flex-col items-center text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+            </div>
+            <h2 className="mt-4 text-xl font-bold text-emerald-800">
+              Your Data is Ready
+            </h2>
+            <p className="mt-1 text-sm text-emerald-600">
+              No fixes needed — your data is clean. Download it below.
+            </p>
+          </div>
+        </div>
       )}
 
       {isRunning && (
@@ -150,8 +160,12 @@ export function ExecuteStep() {
               />
             </div>
           )}
+        </>
+      )}
 
-          {/* Download Section — separate from execution */}
+      {/* Download Section — shown after execution OR when no fixes needed */}
+      {((hasExecuted && !isRunning) || (!hasExecuted && !isRunning && enabledFixes.length === 0)) && (
+        <>
           <div className="flex flex-col items-center gap-3">
             <button
               type="button"
