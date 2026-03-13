@@ -69,29 +69,44 @@ export function AnalysisStep() {
     };
   }, [result]);
 
-  // Edit a cell inline — clears verified state since data changed
+  // Auto-invalidate verified tabs if issues reappear after re-validation
+  useEffect(() => {
+    if (verifiedTabs.size === 0) return;
+    const invalidated = new Set<IssueTab>();
+    for (const tab of verifiedTabs) {
+      const count = counts[tab as keyof typeof counts];
+      if (typeof count === 'number' && count > 0) {
+        invalidated.add(tab);
+      }
+    }
+    if (invalidated.size > 0) {
+      setVerifiedTabs((prev) => {
+        const next = new Set(prev);
+        for (const tab of invalidated) next.delete(tab);
+        return next;
+      });
+    }
+  }, [counts, verifiedTabs]);
+
+  // Edit a cell inline — keeps verified sections that still have 0 issues
   const handleEditCell = useCallback(
     (rowIndex: number, column: string, newValue: CellValue) => {
       const updated = [...activeData];
       updated[rowIndex] = { ...updated[rowIndex], [column]: newValue };
       setActiveData(updated);
-      setVerifiedTabs(new Set()); // edits invalidate all verified sections
-      clearDismissedRows(); // data changed, reset dismissals
       setTimeout(() => validate(), 50);
     },
-    [activeData, setActiveData, validate, clearDismissedRows],
+    [activeData, setActiveData, validate],
   );
 
-  // Delete a row — clears verified state since data changed
+  // Delete a row — keeps verified sections that still have 0 issues
   const handleDeleteRow = useCallback(
     (rowIndex: number) => {
       const updated = activeData.filter((_, i) => i !== rowIndex);
       setActiveData(updated);
-      setVerifiedTabs(new Set());
-      clearDismissedRows(); // data changed, reset dismissals
       setTimeout(() => validate(), 50);
     },
-    [activeData, setActiveData, validate, clearDismissedRows],
+    [activeData, setActiveData, validate],
   );
 
   // Confirm a row is correct — dismiss its issues from review
