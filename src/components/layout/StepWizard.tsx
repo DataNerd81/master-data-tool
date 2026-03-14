@@ -5,12 +5,8 @@ import type { WizardPhase } from '@/types';
 import { useAppStore } from '@/stores/app-store';
 import { cn } from '@/components/ui/cn';
 
-const PHASE_COLORS: Record<WizardPhase, { bg: string; text: string; border: string }> = {
-  Setup:   { bg: 'bg-kn-blue/10',  text: 'text-kn-blue',  border: 'border-kn-blue/20' },
-  Process: { bg: 'bg-kn-teal/10',  text: 'text-kn-teal',  border: 'border-kn-teal/20' },
-  Enrich:  { bg: 'bg-amber-50',    text: 'text-amber-700', border: 'border-amber-200' },
-  Export:  { bg: 'bg-emerald-50',   text: 'text-emerald-700', border: 'border-emerald-200' },
-};
+// Phase colours are now driven by completion state, not per-phase hue.
+// See COMPLETED / INCOMPLETE constants below.
 
 /**
  * Phase-grouped step wizard for 11 steps.
@@ -50,7 +46,6 @@ export function StepWizard() {
       <div className="mx-auto max-w-7xl px-3 py-2.5 sm:px-4 lg:px-6">
         <div className="flex items-center gap-1.5 sm:gap-2">
           {phases.map((group, phaseIdx) => {
-            const phaseColor = PHASE_COLORS[group.phase];
             const firstStepGlobalIdx = WIZARD_STEPS.findIndex(
               (s) => s.id === group.steps[0].id,
             );
@@ -64,10 +59,10 @@ export function StepWizard() {
                 <div
                   className={cn(
                     'flex items-center gap-1 rounded-lg border px-1.5 py-1 sm:px-2 sm:py-1.5 transition-all',
-                    isPhaseActive
-                      ? `${phaseColor.bg} ${phaseColor.border} shadow-sm`
-                      : isPhaseCompleted
-                        ? 'border-gray-200 bg-gray-50'
+                    isPhaseCompleted
+                      ? 'border-step-parent-complete/40 bg-step-parent-complete shadow-sm'
+                      : isPhaseActive
+                        ? 'border-step-parent-incomplete/60 bg-step-parent-incomplete shadow-sm'
                         : 'border-gray-100 bg-gray-50/50',
                   )}
                 >
@@ -75,11 +70,9 @@ export function StepWizard() {
                   <span
                     className={cn(
                       'hidden text-[9px] font-bold uppercase tracking-wider xl:block',
-                      isPhaseActive
-                        ? phaseColor.text
-                        : isPhaseCompleted
-                          ? 'text-gray-500'
-                          : 'text-gray-300',
+                      isPhaseCompleted || isPhaseActive
+                        ? 'text-black'
+                        : 'text-gray-300',
                     )}
                   >
                     {group.phase}
@@ -112,9 +105,9 @@ export function StepWizard() {
                             className={cn(
                               'flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold transition-all',
                               isCompleted &&
-                                'bg-kn-blue text-white group-hover:bg-kn-blue/80',
+                                'bg-step-sub-complete text-black group-hover:bg-step-sub-complete/80',
                               isCurrent &&
-                                'bg-kn-teal text-white shadow shadow-kn-teal/30',
+                                'bg-step-sub-incomplete text-black shadow shadow-step-sub-incomplete/30',
                               isFuture && 'bg-gray-200 text-gray-400',
                             )}
                           >
@@ -141,9 +134,9 @@ export function StepWizard() {
                             className={cn(
                               'text-[10px] font-medium whitespace-nowrap',
                               isCurrent
-                                ? 'text-kn-teal hidden sm:block'
+                                ? 'text-black hidden sm:block'
                                 : isCompleted
-                                  ? 'text-gray-500 hidden 2xl:block'
+                                  ? 'text-black hidden 2xl:block'
                                   : 'text-gray-300 hidden 2xl:block',
                             )}
                           >
@@ -161,7 +154,7 @@ export function StepWizard() {
                     <div
                       className={cn(
                         'h-full rounded-full',
-                        isPhaseCompleted ? 'bg-kn-blue' : 'bg-gray-200',
+                        isPhaseCompleted ? 'bg-step-parent-complete' : 'bg-gray-200',
                       )}
                     />
                   </div>

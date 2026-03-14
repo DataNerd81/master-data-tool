@@ -11,6 +11,14 @@
   --color-kn-purple: #8080ea;
   --color-kn-navy: #174881;
   --color-kn-light: #f8fafc;
+
+  /* Step wizard — parent (phase) bar */
+  --color-step-parent-incomplete: #ffbf16;
+  --color-step-parent-complete: #6ec7cc;
+
+  /* Step wizard — sub-task (individual step) */
+  --color-step-sub-incomplete: #fbe198;
+  --color-step-sub-complete: #bfe8e6;
 }
 
 /* --- Base layer overrides --- */
