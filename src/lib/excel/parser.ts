@@ -205,6 +205,35 @@ function parseSheet(
 
   // Extract data rows (starting from the row after the header)
   const data: DataRow[] = [];
+
+  // When the header row is NOT the first row, scan pre-header rows for
+  // date-bearing rows (e.g. "Date 31/05/2023  Tax invoice no ...").
+  // These rows appear above the column headers in fuel card statements
+  // and contain the transaction date for the block below.  We include
+  // the LAST such row so the pre-processor can pick up the initial date.
+  if (headerRow > range.s.r) {
+    let lastDateRow: DataRow | null = null;
+    for (let r = range.s.r; r < headerRow; r++) {
+      let rowText = '';
+      const candidate: DataRow = {};
+      for (let c = range.s.c; c <= range.e.c; c++) {
+        const addr = `${colIndexToLetter(c)}${r + 1}`;
+        const cell = ws[addr] as XLSX.CellObject | undefined;
+        const value = convertCellValue(cell);
+        const header = headers[c - range.s.c];
+        candidate[header] = value;
+        if (cell?.v != null) rowText += ' ' + String(cell.v);
+      }
+      // Check if this row contains a "Date DD/MM/YYYY" pattern
+      if (/\bDate\s*:?\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}/i.test(rowText)) {
+        lastDateRow = candidate;
+      }
+    }
+    if (lastDateRow) {
+      data.push(lastDateRow);
+    }
+  }
+
   for (let r = headerRow + 1; r <= range.e.r; r++) {
     const row: DataRow = {};
     let hasData = false;

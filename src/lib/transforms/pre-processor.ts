@@ -184,11 +184,22 @@ function extractStandaloneDate(row: DataRow): string | null {
  * Check if a row is primarily a date/page header row (not a transaction row).
  * These rows contain "Date XX/XX/XXXX" + optional "Tax invoice no" / "page X of Y"
  * but no fuel transaction data.
+ *
+ * Handles both text dates ("Date 31/05/2023") and Excel Date objects.
  */
 function isDateHeaderRow(row: DataRow): boolean {
   const allText = getAllRowText(row);
-  // Must contain "Date DD/MM/YYYY" pattern
-  if (!/\bDate\s*:?\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}/i.test(allText)) return false;
+
+  // Check for text "Date DD/MM/YYYY" pattern
+  const hasTextDate = /\bDate\s*:?\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}/i.test(allText);
+
+  // Check for "Date" word + a Date object anywhere in the row
+  const hasDateWord = /\bDate\b/i.test(allText);
+  const hasDateObject = Object.values(row).some((v) => v instanceof Date);
+  const hasDateCombo = hasDateWord && hasDateObject;
+
+  if (!hasTextDate && !hasDateCombo) return false;
+
   // Should also contain statement chrome like "Tax invoice", "Account no", "page"
   // OR have very few non-empty cells (date-only rows)
   const nonEmpty = Object.values(row).filter(
