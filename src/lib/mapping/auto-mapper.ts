@@ -175,11 +175,13 @@ const FUEL_KEYWORDS: { pattern: RegExp; entry: NGAEntry; confident: boolean }[] 
   { pattern: /renewable\s*diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Renewable diesel \u2013 Euro i' }, confident: true },
   { pattern: /renewable\s*diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Renewable diesel' }, confident: true },
 
-  // Diesel variants — clear fuel names
+  // Diesel variants — clear fuel names (including abbreviated codes)
   { pattern: /diesel.*euro\s*iv/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iv or higher' }, confident: true },
   { pattern: /diesel.*euro\s*iii/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro iii' }, confident: true },
   { pattern: /diesel.*euro\s*i\b/i, entry: { category: 'Heavy duty vehicles', fuelType: 'Diesel oil - Euro i' }, confident: true },
   { pattern: /diesel/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' }, confident: true },
+  { pattern: /\bprm\s*dsl\s*a?\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' }, confident: true },
+  { pattern: /\bprmdsla?\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Diesel oil' }, confident: true },
 
   // Petrol / Gasoline — must come AFTER diesel so "Premium Diesel" doesn't match "Premium"
   { pattern: /\b(petrol|gasoline)\b/i, entry: { category: 'Cars and light commercial vehicles', fuelType: 'Gasoline (petrol)' }, confident: true },
