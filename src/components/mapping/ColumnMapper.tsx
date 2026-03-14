@@ -1,10 +1,11 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Wand2, Save, FolderOpen } from 'lucide-react';
+import { Wand2, Save, FolderOpen, RotateCcw } from 'lucide-react';
 import { useMapping } from '@/hooks/use-mapping';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
+import { useMappingStore } from '@/stores/mapping-store';
 import { getSchema } from '@/lib/schemas/registry';
 import { MappingRow, type PreProcessedHint } from './MappingRow';
 import { cn } from '@/components/ui/cn';
@@ -13,6 +14,7 @@ import type { CellValue } from '@/types';
 export function ColumnMapper() {
   const { autoMap, mappings, updateMapping, saveMappings, loadMappings } =
     useMapping();
+  const clearMappings = useMappingStore((s) => s.reset);
   const selectedTemplateId = useAppStore((s) => s.selectedTemplateId);
   const workbook = useDataStore((s) => s.workbook);
   const selectedSheets = useDataStore((s) => s.selectedSheets);
@@ -180,6 +182,14 @@ export function ColumnMapper() {
           >
             <Save className="h-3.5 w-3.5" />
             Save
+          </button>
+          <button
+            type="button"
+            onClick={clearMappings}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Clear All
           </button>
           <button
             type="button"
