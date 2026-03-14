@@ -21,6 +21,8 @@ interface ValidationState {
   dismissRow: (rowIndex: number) => void;
   /** Clear all dismissed rows (e.g. when data changes) */
   clearDismissedRows: () => void;
+  /** Remove a row: drop entries for that index and shift all higher indices down */
+  removeRow: (rowIndex: number) => void;
   reset: () => void;
 }
 
@@ -48,6 +50,23 @@ export const useValidationStore = create<ValidationState>()((set) => ({
     }),
 
   clearDismissedRows: () => set({ dismissedRows: new Set() }),
+
+  removeRow: (rowIndex) =>
+    set((state) => {
+      // Drop auto-detected cells for the deleted row and shift higher indices
+      const autoDetectedCells = state.autoDetectedCells
+        .filter((c) => c.row !== rowIndex)
+        .map((c) => (c.row > rowIndex ? { ...c, row: c.row - 1 } : c));
+
+      // Shift dismissed rows
+      const dismissedRows = new Set<number>();
+      for (const r of state.dismissedRows) {
+        if (r === rowIndex) continue;
+        dismissedRows.add(r > rowIndex ? r - 1 : r);
+      }
+
+      return { autoDetectedCells, dismissedRows };
+    }),
 
   reset: () => set(initialState),
 }));
