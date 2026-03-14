@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect, useState } from 'react';
+import { useMemo, useEffect, useState, useRef } from 'react';
 import { ArrowRight, ArrowLeft, Columns3, Fuel, Loader2 } from 'lucide-react';
 import { useAppStore } from '@/stores/app-store';
 import { useDataStore } from '@/stores/data-store';
@@ -15,16 +15,21 @@ export function MappingStep() {
   const { autoMap, autoDetectFuelTypes } = useMapping();
   const [autoSkipping, setAutoSkipping] = useState(false);
 
+  // Track whether we've already auto-skipped once so that navigating
+  // back from Review doesn't immediately skip again.
+  const hasAutoSkipped = useRef(false);
+
   const schema = useMemo(
     () => (selectedTemplateId ? getSchema(selectedTemplateId) : undefined),
     [selectedTemplateId],
   );
 
-  // Auto-skip mapping for pre-processed files (e.g. AmpolCard)
+  // Auto-skip mapping for pre-processed files (e.g. AmpolCard) — first visit only
   const isPreProcessed = !!(preProcessSummary && preProcessSummary.regosFound.length > 0);
 
   useEffect(() => {
-    if (!isPreProcessed) return;
+    if (!isPreProcessed || hasAutoSkipped.current) return;
+    hasAutoSkipped.current = true;
     setAutoSkipping(true);
     // Run auto-mapping, then fuel detection, then skip to review
     autoMap();

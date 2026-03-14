@@ -27,18 +27,45 @@ export const useMappingStore = create<MappingState>()((set, get) => ({
   setMappings: (m) => set({ mappings: m }),
 
   updateMapping: (sourceCol, targetCol) =>
-    set((state) => ({
-      mappings: state.mappings.map((m) =>
-        m.sourceColumn === sourceCol
-          ? {
-              ...m,
-              targetColumn: targetCol,
-              confidence: targetCol ? 'exact' : 'unmapped',
-              score: targetCol ? 1 : 0,
-            }
+    set((state) => {
+      // First, clear any existing mapping that already points to this target
+      // (enforce 1:1 constraint — each target can only have one source)
+      let updated = state.mappings.map((m) =>
+        m.targetColumn === targetCol && targetCol !== null
+          ? { ...m, targetColumn: null, confidence: 'unmapped' as const, score: 0 }
           : m,
-      ),
-    })),
+      );
+
+      // Check if there's an existing entry for this source column
+      const existingIdx = updated.findIndex((m) => m.sourceColumn === sourceCol);
+
+      if (existingIdx >= 0) {
+        // Update the existing entry
+        updated = updated.map((m, i) =>
+          i === existingIdx
+            ? {
+                ...m,
+                targetColumn: targetCol,
+                confidence: targetCol ? ('exact' as const) : ('unmapped' as const),
+                score: targetCol ? 1 : 0,
+              }
+            : m,
+        );
+      } else if (targetCol) {
+        // Create a new mapping entry for this source -> target
+        updated = [
+          ...updated,
+          {
+            sourceColumn: sourceCol,
+            targetColumn: targetCol,
+            confidence: 'exact' as const,
+            score: 1,
+          },
+        ];
+      }
+
+      return { mappings: updated };
+    }),
 
   reset: () => set(initialState),
 
