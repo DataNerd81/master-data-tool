@@ -1,4 +1,5 @@
 import type { DataRow, TemplateSchema, ValidationIssue } from '@/types';
+import { inferFuelType } from '@/lib/mapping/auto-mapper';
 
 // ---------------------------------------------------------------------------
 // Mixed Fuel Types Rule — flags regos that have multiple different fuel types
@@ -83,7 +84,15 @@ export function checkMixedFuelTypes(
       // Skip rows that match the dominant fuel type — they're most likely correct
       if (fuelStr === dominantFuel) continue;
 
+      // Skip rows where the product description is a confident match for the
+      // mapped fuel type — e.g. "UNLEADED PETROL" → "Gasoline (petrol)" is
+      // obviously correct even if the rego has mixed fuel types elsewhere.
       const product = row[productCol] ?? row[fuelTypeCol] ?? '';
+      const productText = String(product).trim();
+      if (productText) {
+        const inference = inferFuelType(productText);
+        if (inference?.confident) continue;
+      }
 
       issues.push({
         id: `mixed-fuel-${rowIdx}`,
