@@ -76,7 +76,94 @@ function colIndexToLetter(index: number): string {
 }
 
 /**
+ * Known column-name patterns used to identify the real header row in messy
+ * sheets.  Each pattern corresponds to a common fuel-data column name or alias.
+ */
+const HEADER_KEYWORD_PATTERNS: RegExp[] = [
+  // Date
+  /^date$/i, /\bdate\b/i, /\btransaction\s*date\b/i,
+  // Product / Fuel
+  /^product$/i, /\bproduct\b/i, /\bfuel\b/i, /\bdescription\b/i,
+  // Quantity
+  /^quantity$/i, /\bquantity\b/i, /\bqty\b/i, /\bvolume\b/i, /\blitres\b/i,
+  // Location / Card details
+  /\blocation\b/i, /\bcard\s*details\b/i, /\bsite\b/i,
+  // Transaction / Odometer
+  /\btransaction\b/i, /\bodometer\b/i,
+  // Rego / Asset
+  /\brego\b/i, /\basset\b/i, /\bregistration\b/i, /\bvehicle\b/i,
+  // Totals / GST (common in fuel card statements)
+  /\btotal\s*excl\b/i, /\btotal\s*inc\b/i, /\bgst\b/i,
+];
+
+/**
+ * Score a row to see how many cells match known header keywords.
+ * Returns the count of distinct header keywords matched.
+ */
+function scoreHeaderRow(
+  ws: XLSX.WorkSheet,
+  row: number,
+  colStart: number,
+  colEnd: number,
+): number {
+  let matches = 0;
+  const seen = new Set<number>(); // track which patterns matched to avoid double-counting
+
+  for (let c = colStart; c <= colEnd; c++) {
+    const addr = `${colIndexToLetter(c)}${row + 1}`;
+    const cell = ws[addr] as XLSX.CellObject | undefined;
+    if (!cell || cell.v == null) continue;
+    const text = String(cell.v).trim();
+    if (!text || text.length > 60) continue; // headers are short text
+
+    for (let i = 0; i < HEADER_KEYWORD_PATTERNS.length; i++) {
+      if (!seen.has(i) && HEADER_KEYWORD_PATTERNS[i].test(text)) {
+        seen.add(i);
+        matches++;
+        break; // one match per cell is enough
+      }
+    }
+  }
+
+  return matches;
+}
+
+/**
+ * Scan the first N rows of a worksheet to find the real header row.
+ * Returns the 0-based row index of the best candidate, or the range start
+ * row if no strong match is found.
+ *
+ * A row needs at least 3 keyword matches to be considered a header row.
+ * This handles messy fuel card statements where 80+ junk rows precede
+ * the actual column headers.
+ */
+function findHeaderRow(
+  ws: XLSX.WorkSheet,
+  range: XLSX.Range,
+  maxScan: number = 150,
+): number {
+  const lastRow = Math.min(range.s.r + maxScan, range.e.r);
+  let bestRow = range.s.r;
+  let bestScore = 0;
+
+  for (let r = range.s.r; r <= lastRow; r++) {
+    const score = scoreHeaderRow(ws, r, range.s.c, range.e.c);
+    if (score > bestScore) {
+      bestScore = score;
+      bestRow = r;
+    }
+  }
+
+  // Only use the detected header row if it has at least 3 keyword matches
+  // (otherwise the sheet probably has normal headers in row 1)
+  return bestScore >= 3 ? bestRow : range.s.r;
+}
+
+/**
  * Parse a single worksheet into a ParsedSheet, handling merged cells.
+ *
+ * Uses smart header detection to find the real header row in messy
+ * fuel card statement sheets where junk rows precede the actual data.
  */
 function parseSheet(
   ws: XLSX.WorkSheet,
@@ -104,18 +191,21 @@ function parseSheet(
     }
   }
 
-  // Extract headers from the first row
+  // Find the real header row (may not be row 1 in messy sheets)
+  const headerRow = findHeaderRow(ws, range);
+
+  // Extract headers from the detected header row
   const headers: string[] = [];
   for (let c = range.s.c; c <= range.e.c; c++) {
-    const addr = `${colIndexToLetter(c)}${range.s.r + 1}`;
+    const addr = `${colIndexToLetter(c)}${headerRow + 1}`;
     const cell = ws[addr] as XLSX.CellObject | undefined;
     const headerVal = cell?.v != null ? String(cell.v).trim() : `Column_${c + 1}`;
     headers.push(headerVal);
   }
 
-  // Extract data rows (starting from row 2)
+  // Extract data rows (starting from the row after the header)
   const data: DataRow[] = [];
-  for (let r = range.s.r + 1; r <= range.e.r; r++) {
+  for (let r = headerRow + 1; r <= range.e.r; r++) {
     const row: DataRow = {};
     let hasData = false;
 

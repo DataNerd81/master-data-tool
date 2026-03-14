@@ -36,11 +36,26 @@ const JUNK_ROW_PATTERNS: RegExp[] = [
   /\bsubtotal\b/i,
   /\bgrand\s*total\b/i,
   /\bperiodic\s*card\s*fee\b/i,
-  /\bcard\s*fee\b/i,
+  /\bcard\s*fee\b\s*\$/i,
+  /\bcard\s*fees?\b/i,
+  /^CARD\s*FEES$/i,
   /\baccount\s*fee\b/i,
   /\badmin\s*(fee|charge)\b/i,
   /\bservice\s*(fee|charge)\b/i,
   /\bmonthly\s*(fee|charge)\b/i,
+  // Statement/invoice chrome
+  /\bclosing\s*balance\b/i,
+  /\bopening\s*balance\b/i,
+  /\baccount\s*no\b/i,
+  /\btax\s*invoice\b/i,
+  /\bpage\s+\d+\s*(of\s*\d+)?/i,
+  /\btotal\s*excl\s*gst/i,
+  /\btotal\s*inc\s*gst/i,
+  /\bgst\s*amount\b/i,
+  /\btotal\s*for\s*card\b/i,
+  /\bcard\s*transactions\b/i,
+  // Column-header-like rows that repeat mid-sheet
+  /\bcard\s*details.*location\b/i,
 ];
 
 /**
@@ -87,7 +102,14 @@ function isSectionHeader(row: DataRow): boolean {
  */
 function isJunkRow(row: DataRow): boolean {
   const allText = getAllRowText(row);
-  return JUNK_ROW_PATTERNS.some((p) => p.test(allText));
+  if (JUNK_ROW_PATTERNS.some((p) => p.test(allText))) return true;
+
+  // Check if any individual cell is a standalone "Total" (summary row)
+  for (const val of Object.values(row)) {
+    if (typeof val === 'string' && /^\s*total\s*$/i.test(val)) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -112,6 +134,89 @@ function hasNumericData(row: DataRow): boolean {
     }
   }
   return numericCount >= 1;
+}
+
+// ---------------------------------------------------------------------------
+// Date extraction / propagation
+// ---------------------------------------------------------------------------
+
+/**
+ * Patterns to detect standalone date rows like:
+ *   "Date 31/05/2023"
+ *   "Date: 01-06-2023"
+ *   "Date 31/05/2023  Tax invoice no  0109588226"
+ *
+ * Returns the date string if found, otherwise null.
+ */
+const DATE_ROW_PATTERNS: RegExp[] = [
+  /\bDate\s*:?\s*(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4})/i,
+];
+
+/**
+ * Try to extract a standalone date from a row.
+ * These rows appear in fuel card statements as "Date 31/05/2023" and contain
+ * the transaction date for the block of transactions below.
+ */
+function extractStandaloneDate(row: DataRow): string | null {
+  const allText = getAllRowText(row);
+
+  for (const pattern of DATE_ROW_PATTERNS) {
+    const match = allText.match(pattern);
+    if (match?.[1]) {
+      return match[1];
+    }
+  }
+
+  // Also check individual cell values for Date objects or date-like values
+  for (const val of Object.values(row)) {
+    if (val instanceof Date) {
+      const d = val.getDate().toString().padStart(2, '0');
+      const m = (val.getMonth() + 1).toString().padStart(2, '0');
+      const y = val.getFullYear();
+      return `${d}/${m}/${y}`;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if a row is primarily a date/page header row (not a transaction row).
+ * These rows contain "Date XX/XX/XXXX" + optional "Tax invoice no" / "page X of Y"
+ * but no fuel transaction data.
+ */
+function isDateHeaderRow(row: DataRow): boolean {
+  const allText = getAllRowText(row);
+  // Must contain "Date DD/MM/YYYY" pattern
+  if (!/\bDate\s*:?\s*\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}/i.test(allText)) return false;
+  // Should also contain statement chrome like "Tax invoice", "Account no", "page"
+  // OR have very few non-empty cells (date-only rows)
+  const nonEmpty = Object.values(row).filter(
+    (v) => v !== null && v !== undefined && v !== '',
+  ).length;
+  if (nonEmpty <= 4) return true;
+  if (/\btax\s*invoice\b/i.test(allText)) return true;
+  if (/\baccount\s*no\b/i.test(allText)) return true;
+  if (/\bpage\b/i.test(allText)) return true;
+  return false;
+}
+
+/**
+ * Find the date column in headers — the column where dates should go.
+ */
+function findDateColumn(headers: string[]): string | null {
+  const datePatterns = [
+    /^date$/i, /\bdate\b/i, /\btransaction\s*date\b/i,
+    /\bpurchase\s*date\b/i, /\bfill\s*date\b/i,
+  ];
+  for (const header of headers) {
+    for (const pattern of datePatterns) {
+      if (pattern.test(header.trim())) {
+        return header;
+      }
+    }
+  }
+  return null;
 }
 
 /**
@@ -189,10 +294,12 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
 
   const regosFound: string[] = [];
   let currentRego: string | null = null;
+  let currentDate: string | null = null;
   let skippedJunkRows = 0;
   let skippedSectionHeaders = 0;
 
   const hasUnitCol = findUnitColumn(headers) !== null;
+  const dateCol = findDateColumn(headers);
   const cleanRows: DataRow[] = [];
 
   // Check if there's already a rego-like column in headers
@@ -206,6 +313,16 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
 
   for (const row of data) {
     const allText = getAllRowText(row);
+
+    // Check if this row is a date/page header (e.g. "Date 31/05/2023  Tax invoice no")
+    if (isDateHeaderRow(row)) {
+      const date = extractStandaloneDate(row);
+      if (date) {
+        currentDate = date;
+      }
+      skippedJunkRows++;
+      continue;
+    }
 
     // Check if this row is a section header with a rego
     if (isSectionHeader(row)) {
@@ -228,6 +345,11 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
 
     // Skip rows with no meaningful data
     if (!hasNumericData(row)) {
+      // But first check if this row has a standalone date we should capture
+      const date = extractStandaloneDate(row);
+      if (date) {
+        currentDate = date;
+      }
       continue;
     }
 
@@ -248,6 +370,16 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
     // Inject rego if we have one and there's no rego column
     if (!existingRegoCol && currentRego) {
       cleanRow['Rego/Asset Number/Identifier'] = currentRego;
+    }
+
+    // Propagate date to transaction rows that don't have one.
+    // In fuel card statements the date often appears in a separate header
+    // row like "Date 31/05/2023" above the transaction block.
+    if (currentDate && dateCol) {
+      const existingDate = cleanRow[dateCol];
+      if (existingDate === null || existingDate === undefined || existingDate === '') {
+        cleanRow[dateCol] = currentDate;
+      }
     }
 
     // Default unit to "L" if no unit column exists
