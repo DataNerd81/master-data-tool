@@ -268,6 +268,105 @@ function looksLikeDateColumn(data: DataRow[], colName: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Quantity rescue — find misaligned quantity values
+// ---------------------------------------------------------------------------
+
+/**
+ * Patterns for columns that should NOT be treated as quantity sources.
+ * These are monetary, date, identifier, or descriptive columns.
+ */
+const NON_QUANTITY_COL_PATTERNS: RegExp[] = [
+  /\btotal\b/i, /\bgst\b/i, /\btax\b/i, /\bfee\b/i,
+  /\bdate\b/i, /\btransaction\b/i, /\bodometer\b/i,
+  /\bcard\b/i, /\blocation\b/i, /\bsite\b/i,
+  /\brego\b/i, /\basset\b/i, /\bregistration\b/i,
+  /\bproduct\b/i, /\bfuel\b/i, /\bdescription\b/i,
+  /\binvoice\b/i, /\baccount\b/i, /\bbalance\b/i,
+  /\bunit\b/i,
+];
+
+/**
+ * Find the quantity column by header name.
+ */
+function findQtyColumn(headers: string[]): string | null {
+  const qtyPatterns = [
+    /^quantity$/i, /\bquantity\b/i, /\bqty\b/i, /\bvolume\b/i,
+    /^litres$/i, /^liters$/i, /\bconsumption\b/i,
+  ];
+  for (const header of headers) {
+    for (const pattern of qtyPatterns) {
+      if (pattern.test(header.trim())) {
+        return header;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * After initial row extraction, check if the detected "Quantity" column is
+ * mostly empty.  If so, look for a "Column_N" or other unnamed column that
+ * consistently holds positive numbers — that's likely the real quantity
+ * column whose header was shifted by a merged cell.
+ *
+ * Moves values from the misaligned column into the quantity column.
+ */
+function rescueQuantityValues(
+  data: DataRow[],
+  headers: string[],
+): void {
+  const qtyCol = findQtyColumn(headers);
+  if (!qtyCol) return;
+
+  // Count how many data rows have a value in the quantity column
+  let qtyFilled = 0;
+  for (const row of data) {
+    const v = row[qtyCol];
+    if (v !== null && v !== undefined && v !== '') qtyFilled++;
+  }
+
+  // If more than 30% of rows already have quantity, the column is fine
+  if (data.length === 0 || qtyFilled / data.length > 0.3) return;
+
+  // Find candidate columns: Column_N or unnamed columns with numeric values
+  // that are NOT known non-quantity columns
+  const candidates: { header: string; filledCount: number }[] = [];
+
+  for (const header of headers) {
+    if (header === qtyCol) continue;
+    // Skip known non-quantity columns
+    if (NON_QUANTITY_COL_PATTERNS.some((p) => p.test(header))) continue;
+
+    let filled = 0;
+    for (const row of data) {
+      const v = row[header];
+      if (typeof v === 'number' && v > 0 && v < 100000) filled++;
+    }
+    if (filled > qtyFilled) {
+      candidates.push({ header, filledCount: filled });
+    }
+  }
+
+  if (candidates.length === 0) return;
+
+  // Pick the candidate with the most filled rows
+  candidates.sort((a, b) => b.filledCount - a.filledCount);
+  const rescueCol = candidates[0].header;
+
+  // Move values from the rescue column to the quantity column
+  for (const row of data) {
+    const existingQty = row[qtyCol];
+    if (existingQty !== null && existingQty !== undefined && existingQty !== '') continue;
+
+    const rescueVal = row[rescueCol];
+    if (typeof rescueVal === 'number' && rescueVal > 0) {
+      row[qtyCol] = rescueVal;
+      row[rescueCol] = null;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main Pre-Processor
 // ---------------------------------------------------------------------------
 
@@ -400,6 +499,11 @@ export function preProcessFuelData(sheet: ParsedSheet): PreProcessResult {
 
     cleanRows.push(cleanRow);
   }
+
+  // Rescue misaligned quantity values — when a merged cell in the header
+  // row shifts the "Quantity" column, values may end up in a "Column_N"
+  // placeholder.  Move them to the correct column.
+  rescueQuantityValues(cleanRows, headers);
 
   // Build updated headers
   const updatedHeaders = [...headers];
