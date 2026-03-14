@@ -29,6 +29,7 @@ export function AnalysisStep() {
   const { validate, result, isValidating } = useValidation();
   const dismissRow = useValidationStore((s) => s.dismissRow);
   const clearDismissedRows = useValidationStore((s) => s.clearDismissedRows);
+  const removeRow = useValidationStore((s) => s.removeRow);
   const [verifiedTabs, setVerifiedTabs] = useState<Set<IssueTab>>(new Set());
 
   // Get the 7 schema column names in order
@@ -99,14 +100,16 @@ export function AnalysisStep() {
     [activeData, setActiveData, validate],
   );
 
-  // Delete a row — keeps verified sections that still have 0 issues
+  // Delete a row — also shifts auto-detected cells and dismissed rows so
+  // stale indices don't cause phantom "unsure" rows to reappear.
   const handleDeleteRow = useCallback(
     (rowIndex: number) => {
       const updated = activeData.filter((_, i) => i !== rowIndex);
       setActiveData(updated);
+      removeRow(rowIndex);
       setTimeout(() => validate(), 50);
     },
-    [activeData, setActiveData, validate],
+    [activeData, setActiveData, removeRow, validate],
   );
 
   // Confirm a row is correct — dismiss its issues from review
