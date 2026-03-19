@@ -31,6 +31,8 @@ interface DataReviewTableProps {
   onEditCell: (rowIndex: number, column: string, newValue: CellValue) => void;
   /** Called when a row is deleted. */
   onDeleteRow: (rowIndex: number) => void;
+  /** Called when the user wants to delete all rows in the current filtered view. */
+  onDeleteAllFiltered: (rowIndices: number[]) => void;
   /** Called when the user confirms a row is correct (dismisses its issues). */
   onDismissRow: (rowIndex: number) => void;
   /** Called when the user clicks "Verify Changes" — re-runs validation for the given tab. */
@@ -103,6 +105,7 @@ export function DataReviewTable({
   columns,
   onEditCell,
   onDeleteRow,
+  onDeleteAllFiltered,
   onDismissRow,
   onVerify,
   verifiedTabs,
@@ -111,6 +114,7 @@ export function DataReviewTable({
   const [page, setPage] = useState(0);
   const [editingCell, setEditingCell] = useState<{ row: number; col: string } | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus input when editing
@@ -176,6 +180,7 @@ export function DataReviewTable({
     setActiveTab(tab);
     setPage(0);
     setEditingCell(null);
+    setShowDeleteConfirm(false);
   }
 
   // Inline editing
@@ -268,6 +273,47 @@ export function DataReviewTable({
             </button>
           );
         })}
+
+        {/* Delete All button — shown on issue tabs when there are rows */}
+        {activeTab !== 'all' && filteredIndices.length > 0 && (
+          <div className="ml-auto relative">
+            {showDeleteConfirm ? (
+              <div className="flex items-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-1.5">
+                <span className="text-xs font-medium text-red-700">
+                  Delete {filteredIndices.length} row{filteredIndices.length !== 1 ? 's' : ''}?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onDeleteAllFiltered(filteredIndices);
+                    setShowDeleteConfirm(false);
+                    setPage(0);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-md bg-red-600 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-red-700"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="rounded-md px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-50 hover:border-red-300"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete All ({filteredIndices.length})
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Spreadsheet Table */}
