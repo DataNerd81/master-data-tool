@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Pencil,
@@ -13,6 +14,16 @@ import {
 } from 'lucide-react';
 import type { DataRow, CellValue, ValidationIssue } from '@/types';
 import { cn } from '@/components/ui/cn';
+import { getNGACategories, getFuelTypesForCategory, NGA_REFERENCE_TABLE } from '@/lib/schemas/scope1';
+
+// ---------------------------------------------------------------------------
+// NGA dropdown helpers
+// ---------------------------------------------------------------------------
+
+const NGA_CATEGORY_COL = 'Category (NGA)';
+const NGA_FUEL_TYPE_COL = 'Fuel Type (NGA)';
+const NGA_CATEGORIES = getNGACategories();
+const ALL_NGA_FUEL_TYPES = [...new Set(NGA_REFERENCE_TABLE.map((e) => e.fuelType))];
 
 // ---------------------------------------------------------------------------
 // Types
@@ -116,10 +127,14 @@ export function DataReviewTable({
   const [editValue, setEditValue] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectRef = useRef<HTMLSelectElement>(null);
 
-  // Focus input when editing
+  // Focus input/select when editing
   useEffect(() => {
-    if (editingCell && inputRef.current) {
+    if (!editingCell) return;
+    if (editingCell.col === NGA_CATEGORY_COL || editingCell.col === NGA_FUEL_TYPE_COL) {
+      selectRef.current?.focus();
+    } else if (inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
@@ -375,6 +390,21 @@ export function DataReviewTable({
                       const tooltip = getCellTooltip(rowIdx, col);
                       const val = row[col];
 
+                      // Determine if this column uses a dropdown
+                      const isNGACategory = col === NGA_CATEGORY_COL;
+                      const isNGAFuelType = col === NGA_FUEL_TYPE_COL;
+                      const isDropdown = isNGACategory || isNGAFuelType;
+
+                      let dropdownOptions: string[] = [];
+                      if (isEditing && isNGACategory) {
+                        dropdownOptions = NGA_CATEGORIES;
+                      } else if (isEditing && isNGAFuelType) {
+                        const categoryVal = String(row[NGA_CATEGORY_COL] ?? '').trim();
+                        dropdownOptions = categoryVal
+                          ? getFuelTypesForCategory(categoryVal)
+                          : ALL_NGA_FUEL_TYPES;
+                      }
+
                       return (
                         <td
                           key={col}
@@ -384,7 +414,50 @@ export function DataReviewTable({
                           )}
                           title={tooltip}
                         >
-                          {isEditing ? (
+                          {isEditing && isDropdown ? (
+                            <div className="flex items-center gap-1">
+                              <div className="relative w-full">
+                                <select
+                                  ref={selectRef}
+                                  value={editValue}
+                                  onChange={(e) => {
+                                    setEditValue(e.target.value);
+                                    // Auto-commit on selection
+                                    if (!editingCell) return;
+                                    onEditCell(editingCell.row, editingCell.col, e.target.value);
+                                    // If category changed, also clear the fuel type so user picks a new one
+                                    if (isNGACategory) {
+                                      const currentFuel = String(row[NGA_FUEL_TYPE_COL] ?? '');
+                                      const validFuels = getFuelTypesForCategory(e.target.value);
+                                      if (currentFuel && !validFuels.includes(currentFuel)) {
+                                        onEditCell(editingCell.row, NGA_FUEL_TYPE_COL, '');
+                                      }
+                                    }
+                                    setEditingCell(null);
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') cancelEdit();
+                                  }}
+                                  className="w-full appearance-none rounded border border-kn-teal bg-white py-0.5 pl-1.5 pr-6 text-sm outline-none ring-2 ring-kn-teal/30"
+                                >
+                                  <option value="">— Select —</option>
+                                  {dropdownOptions.map((opt) => (
+                                    <option key={opt} value={opt}>
+                                      {opt}
+                                    </option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                              </div>
+                              <button
+                                type="button"
+                                onClick={cancelEdit}
+                                className="rounded p-0.5 text-gray-400 hover:bg-gray-100"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : isEditing ? (
                             <div className="flex items-center gap-1">
                               <input
                                 ref={inputRef}
