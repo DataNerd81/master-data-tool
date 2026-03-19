@@ -23,6 +23,8 @@ interface ValidationState {
   clearDismissedRows: () => void;
   /** Remove a row: drop entries for that index and shift all higher indices down */
   removeRow: (rowIndex: number) => void;
+  /** Remove multiple rows at once: drop entries for those indices and shift remaining indices down */
+  removeRows: (rowIndices: number[]) => void;
   reset: () => void;
 }
 
@@ -63,6 +65,36 @@ export const useValidationStore = create<ValidationState>()((set) => ({
       for (const r of state.dismissedRows) {
         if (r === rowIndex) continue;
         dismissedRows.add(r > rowIndex ? r - 1 : r);
+      }
+
+      return { autoDetectedCells, dismissedRows };
+    }),
+
+  removeRows: (rowIndices) =>
+    set((state) => {
+      const toRemove = new Set(rowIndices);
+
+      // Drop auto-detected cells for deleted rows, then shift indices down
+      const autoDetectedCells = state.autoDetectedCells
+        .filter((c) => !toRemove.has(c.row))
+        .map((c) => {
+          // Count how many removed indices are below this row
+          let shift = 0;
+          for (const ri of rowIndices) {
+            if (ri < c.row) shift++;
+          }
+          return shift > 0 ? { ...c, row: c.row - shift } : c;
+        });
+
+      // Shift dismissed rows
+      const dismissedRows = new Set<number>();
+      for (const r of state.dismissedRows) {
+        if (toRemove.has(r)) continue;
+        let shift = 0;
+        for (const ri of rowIndices) {
+          if (ri < r) shift++;
+        }
+        dismissedRows.add(r - shift);
       }
 
       return { autoDetectedCells, dismissedRows };

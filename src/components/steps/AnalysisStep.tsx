@@ -30,6 +30,7 @@ export function AnalysisStep() {
   const dismissRow = useValidationStore((s) => s.dismissRow);
   const clearDismissedRows = useValidationStore((s) => s.clearDismissedRows);
   const removeRow = useValidationStore((s) => s.removeRow);
+  const removeRows = useValidationStore((s) => s.removeRows);
   const [verifiedTabs, setVerifiedTabs] = useState<Set<IssueTab>>(new Set());
 
   // Get the 7 schema column names in order
@@ -110,6 +111,19 @@ export function AnalysisStep() {
       setTimeout(() => validate(), 50);
     },
     [activeData, setActiveData, removeRow, validate],
+  );
+
+  // Delete multiple rows at once (e.g. all duplicates, all missing-data rows)
+  const handleDeleteAllFiltered = useCallback(
+    (rowIndices: number[]) => {
+      if (rowIndices.length === 0) return;
+      const toRemove = new Set(rowIndices);
+      const updated = activeData.filter((_, i) => !toRemove.has(i));
+      setActiveData(updated);
+      removeRows(rowIndices);
+      setTimeout(() => validate(), 50);
+    },
+    [activeData, setActiveData, removeRows, validate],
   );
 
   // Confirm a row is correct — dismiss its issues from review
@@ -305,6 +319,7 @@ export function AnalysisStep() {
         columns={schemaColumns}
         onEditCell={handleEditCell}
         onDeleteRow={handleDeleteRow}
+        onDeleteAllFiltered={handleDeleteAllFiltered}
         onDismissRow={handleDismissRow}
         onVerify={handleVerify}
         verifiedTabs={verifiedTabs}
